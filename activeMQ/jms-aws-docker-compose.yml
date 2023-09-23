@@ -1,0 +1,14 @@
+version: '2'
+
+services:
+   producer:
+    image: jbcodeforce/jms-producer
+    container_name: producer
+    hostname: producer
+    environment:
+      QUARKUS_ARTEMIS_URL: ssl://b-51ab15a0-267a-4df3-bb81-1c034c06a553-1.mq.us-west-2.amazonaws.com:61617
+      QUARKUS_ARTEMIS_USERNAME: quarkus
+      QUARKUS_ARTEMIS_PASSWORD: quarkus
+    ports:
+      - "8081:8080"
+
