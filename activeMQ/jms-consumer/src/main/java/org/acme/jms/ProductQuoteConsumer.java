@@ -22,8 +22,8 @@ import jakarta.jms.Message;
  * A bean consuming prices from the JMS queue.
  */
 @ApplicationScoped
-public class PriceConsumer implements Runnable {
-    Logger logger = Logger.getLogger("PriceConsumer");
+public class ProductQuoteConsumer implements Runnable {
+    Logger logger = Logger.getLogger(ProductQuoteConsumer.class.getName());
     
     @Inject
     ConnectionFactory connectionFactory;
@@ -35,7 +35,7 @@ public class PriceConsumer implements Runnable {
 
     private volatile String lastPrice;
 
-    public String getLastPrice() {
+    public String getLastQuote() {
         return lastPrice;
     }
 
@@ -62,7 +62,7 @@ public class PriceConsumer implements Runnable {
                     return;
                 }
                 lastPrice = message.getBody(String.class);
-                logger.info("Got last price: " + lastPrice);
+                logger.info("Got last quote: " + lastPrice);
             }
         } catch (JMSException e) {
             logger.info("Stopped runner");

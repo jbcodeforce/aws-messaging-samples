@@ -1,6 +1,7 @@
 package org.acme.jms;
 
 import java.util.Random;
+import java.util.UUID;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -12,14 +13,18 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.jms.ConnectionFactory;
 import jakarta.jms.JMSContext;
+import jakarta.jms.JMSException;
 import jakarta.jms.JMSProducer;
+import jakarta.jms.MessageProducer;
+import jakarta.jms.TextMessage;
 /**
  * A bean producing random prices every n seconds and sending them to the prices JMS queue.
  */
 @ApplicationScoped
-public class PriceProducer implements Runnable {
-    Logger logger = Logger.getLogger("PriceProducer");
+public class ProductQuoteProducer implements Runnable {
+    Logger logger = Logger.getLogger(ProductQuoteProducer.class.getName());
     
+    public static String[] skus = {"sku1", "sku2", "sku3", "sku4", "sku5", "sku6", "sku7", "sku8", "sku9", "sku10"};
     @Inject
     ConnectionFactory connectionFactory;
 
@@ -27,8 +32,16 @@ public class PriceProducer implements Runnable {
     @ConfigProperty(name="queue.name")
     public String queueName;
 
+    @Inject
+    @ConfigProperty(name="quarkus.artemis.url")
+    public String connectionURLs;
+
     private final Random random = new Random();
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+
+    public void init() {
+
+    }
 
     /**
      * Use following code to start automatically when app starts 
@@ -39,7 +52,7 @@ public class PriceProducer implements Runnable {
     void onStop(@Observes ShutdownEvent ev) {
         scheduler.shutdown();
     }
-*/ 
+    */ 
 
     void start(long delay) {
         scheduler.scheduleWithFixedDelay(this, 0L, delay, TimeUnit.SECONDS);
@@ -49,11 +62,23 @@ public class PriceProducer implements Runnable {
         scheduler.shutdown();
     }
 
+    
+    private Quote createRandomQuote(){
+        return new Quote(skus[random.nextInt(skus.length)], random.nextInt(100));
+    
+    }
     @Override
     public void run() {
         try (JMSContext context = connectionFactory.createContext(JMSContext.AUTO_ACKNOWLEDGE)) {
-            context.createProducer().send(context.createQueue(queueName), 
-                    Integer.toString(random.nextInt(100)));
+           
+            Quote q = createRandomQuote();
+            TextMessage msg =  context.createTextMessage(q.toString());
+            msg.setJMSMessageID(UUID.randomUUID().toString());
+            JMSProducer producer = context.createProducer();
+            producer.send(context.createQueue(queueName),msg);
+            logger.info("Sent: " + q.toString());
+        } catch (JMSException e) {
+            e.printStackTrace();
         }
     }
 
@@ -62,10 +87,15 @@ public class PriceProducer implements Runnable {
         try (JMSContext context = connectionFactory.createContext(JMSContext.AUTO_ACKNOWLEDGE)) {
             JMSProducer producer = context.createProducer();
             for (int i = 0; i < totalMessageToSend; i++) {
-                producer.send(context.createQueue("prices"), 
-                    Integer.toString(random.nextInt(100)));
+                Quote q = createRandomQuote();
+                TextMessage msg =  context.createTextMessage(q.toString());
+                msg.setJMSMessageID(UUID.randomUUID().toString());
+                producer.send(context.createQueue(queueName), msg);
+                logger.info("Sent: " + q.toString());
                 Thread.sleep(500);
             }
+        } catch (JMSException e) {
+            e.printStackTrace();
         }
     }
 }

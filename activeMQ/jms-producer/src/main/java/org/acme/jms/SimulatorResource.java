@@ -19,7 +19,7 @@ public class SimulatorResource {
     Logger logger = Logger.getLogger("SimulatorResource");
     
     @Inject
-    PriceProducer producer;
+    ProductQuoteProducer producer;
 
     @POST
     public SimulControl startSimulator(SimulControl control) {

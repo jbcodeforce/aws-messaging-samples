@@ -53,8 +53,26 @@ reactive messaging
 
 ### Code samples and local test
 
+In development mode we can use docker to run one artemis broker. Start with `docker compose -f artemis-docker-compose.yaml up -d`, and then the different `quarkus dev` under each producer or consumer.
+
+We can validate the console at: [http://localhost:8161/console](http://localhost:8161/).
+
 #### JMS
 
+Once the two docker image for jms-producer and jms-consumer are built, using
+
+```sh
+# under jms-producer
+./buildAll
+# jms-consumer
+./buildAll 
+```
+
+Start the jms docker compose
+
+```sh
+docker compose -f jms-docker-compose.yml up -d
+```
 
 #### AMQP
 

@@ -12,16 +12,16 @@ import jakarta.ws.rs.core.MediaType;
  * A simple resource showing the last price.
  */
 @Path("/prices")
-public class PriceResource {
-    Logger logger = Logger.getLogger(PriceResource.class);
+public class QuoteResource {
+    Logger logger = Logger.getLogger(QuoteResource.class);
     @Inject
-    PriceConsumer consumer;
+    ProductQuoteConsumer consumer;
 
     @GET
     @Path("last")
     @Produces(MediaType.TEXT_PLAIN)
     public String last() {
-        logger.info("last called");
-        return consumer.getLastPrice();
+        logger.info("get last quote called");
+        return consumer.getLastQuote();
     }
 }

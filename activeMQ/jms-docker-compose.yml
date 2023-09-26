@@ -9,8 +9,8 @@ services:
       - "61616:61616"
       - "5672:5672"
     environment:
-      AMQ_USER: quarkus
-      AMQ_PASSWORD: quarkus
+      AMQ_USER: admin
+      AMQ_PASSWORD: adminpassw0rd
       AMQ_EXTRA_ARGS: "--relax-jolokia"
     networks:
       - jms-network
@@ -21,8 +21,8 @@ services:
     hostname: producer
     environment:
       QUARKUS_ARTEMIS_URL: tcp://artemis:61616
-      QUARKUS_ARTEMIS_USERNAME: quarkus
-      QUARKUS_ARTEMIS_PASSWORD: quarkus
+      QUARKUS_ARTEMIS_USERNAME: admin
+      QUARKUS_ARTEMIS_PASSWORD: adminpassw0rd
     ports:
       - "8081:8080"
     depends_on:
@@ -36,8 +36,8 @@ services:
     container_name: consumer
     environment:
       QUARKUS_ARTEMIS_URL: tcp://artemis:61616
-      QUARKUS_ARTEMIS_USERNAME: quarkus
-      QUARKUS_ARTEMIS_PASSWORD: quarkus
+      QUARKUS_ARTEMIS_USERNAME: admin
+      QUARKUS_ARTEMIS_PASSWORD: adminpassw0rd
     ports:
       - "8080:8080"
     depends_on:
