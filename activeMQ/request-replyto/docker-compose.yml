@@ -1,0 +1,20 @@
+version: '2'
+
+services:
+  artemis:
+    image: quay.io/artemiscloud/activemq-artemis-broker
+    hostname: artemis
+    ports:
+      - "8161:8161"
+      - "61616:61616"
+      - "5672:5672"
+    environment:
+      AMQ_USER: admin
+      AMQ_PASSWORD: adminpassw0rd
+      AMQ_EXTRA_ARGS: "--relax-jolokia"
+    networks:
+      - jms-network
+
+networks:
+  jms-network:
+    name: jms
