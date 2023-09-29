@@ -2,7 +2,7 @@ version: '2'
 
 services:
   artemis:
-    image: quay.io/artemiscloud/activemq-artemis-broker:1.0.22
+    image: quay.io/artemiscloud/activemq-artemis-broker
     hostname: artemis
     ports:
       - "8161:8161"
