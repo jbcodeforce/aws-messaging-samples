@@ -15,8 +15,8 @@
         <security-enabled>false</security-enabled>
 
         <queues>
-            <queue name="foo">
-                <address>prices</address>
+            <queue name="orders">
+                <address>orders</address>
             </queue>
         </queues>
     </core>

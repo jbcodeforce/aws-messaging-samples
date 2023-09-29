@@ -24,7 +24,7 @@ public class PriceTest {
                 .and()
                 .body(requestBody)
                 .when()
-                .post("/simulator")
+                .post("/orders/simulation")
                 .then()
                 .extract().response();
 

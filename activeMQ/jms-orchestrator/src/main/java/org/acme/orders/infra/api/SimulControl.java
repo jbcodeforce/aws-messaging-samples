@@ -1,4 +1,4 @@
-package org.acme.orders;
+package org.acme.orders.infra.api;
 
 public class SimulControl {
     public long delay;

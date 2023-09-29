@@ -1,5 +1,10 @@
-package org.acme.orders;
+package org.acme.orders.infra.api;
 
+import java.util.List;
+
+import org.acme.orders.domain.Order;
+import org.acme.orders.domain.OrderService;
+import org.acme.orders.infra.repo.OrderRepository;
 import org.jboss.logging.Logger;
 
 import jakarta.enterprise.context.ApplicationScoped;
@@ -8,6 +13,7 @@ import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
+import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.MediaType;
@@ -20,16 +26,27 @@ public class OrderResource {
     Logger logger = Logger.getLogger(OrderResource.class.getName());
     
     @Inject
-    ProductQuoteProducer producer;
+    OrderService service;
+
+    @Inject
+    OrderRepository orderRepository;
 
     @GET
-    public Order getOrder(){
-        return null;
+    public List<Order> getOrders(){
+        return orderRepository.getAllOrders();
+    } 
+
+    @GET
+    @Path("/{id}")
+    public Order getOrderById(@PathParam("id") String id){
+        return orderRepository.findById(id);
     }
 
     @POST
     public Order SaveOrder(Order newOrder){
-        return newOrder;
+        if (newOrder == null) throw 
+            new WebApplicationException("Order should not be empty");
+        return service.processOrder(newOrder);
     }
 
     @POST
@@ -38,16 +55,8 @@ public class OrderResource {
         logger.info("Received control: " + control);
         if (control == null) throw 
             new WebApplicationException("Control should not be empty");
-        
-        if (control.delay >0 ) {
-            producer.start(control.delay);
-        } else if (control.totalMessageToSend > 0) {
-            try {
-                producer.sendNmessages(control.totalMessageToSend);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
+        service.startOrderSimulation(control);
+       
         control.status="Started";
         return control;         
     }
