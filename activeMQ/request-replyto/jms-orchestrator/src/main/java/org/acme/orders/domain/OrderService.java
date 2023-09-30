@@ -3,7 +3,7 @@ package org.acme.orders.domain;
 import java.util.UUID;
 
 import org.acme.orders.infra.api.SimulControl;
-import org.acme.orders.infra.msg.OrderMessageProducer;
+import org.acme.orders.infra.msg.OrderMessageProcessing;
 import org.acme.orders.infra.repo.OrderRepository;
 import org.jboss.logging.Logger;
 
@@ -18,12 +18,12 @@ public class OrderService {
     @Inject
     OrderRepository orderRepository;
     @Inject
-    OrderMessageProducer producer;
+    OrderMessageProcessing producer;
     
     @Transactional
     public Order processOrder(Order newOrder) {
         if (newOrder.orderID == null || newOrder.orderID.length() == 0) {
-            newOrder.orderID = UUID.randomUUID().toString();
+            newOrder.orderID = UUID.randomUUID().toString().substring(0,8);
         }
         newOrder.status = Order.PENDING_STATUS;
         logger.info("processing new order: " + newOrder.toString());
@@ -42,6 +42,11 @@ public class OrderService {
                 producer.sendMessage(o);
             }
         }
+    }
+
+
+    public void processParticipantResponse(Order o) {
+        orderRepository.updateOrder(o);
     }
     
 }

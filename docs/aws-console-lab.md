@@ -10,19 +10,19 @@ For production we need to setup active/standby with shared persistence using Ama
 
 Here are some import screen shots for the configuration using AWS Console
 
-![](./images/mq-cons-1.png)
+![](./images/mq-cons-1.png){ width=700 }
 
 Name and instance type:
 
-![](./images/mq-cons-2.png)
+![](./images/mq-cons-2.png){ width=700 }
 
 Advanced setting, version, VPC, user to authenticate apps ...
 
-![](./images/mq-cons-3.png)
+![](./images/mq-cons-3.png){ width=700 }
 
 To ensure that the broker is accessible within our VPC, we must enable the `enableDnsHostnames` and `enableDnsSupport` VPC attribute.
 
-![](./images/vpc-dns-att.png)
+![](./images/vpc-dns-att.png){ width=700 }
 
 And add our host IP address to the security group on port 8162 (use https://whatismyipaddress.com/)
 

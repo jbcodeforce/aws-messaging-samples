@@ -22,13 +22,13 @@ public class QuotesResource {
     @Channel("quotes") Multi<Quote> quotes;
 
     /**
- * Endpoint retrieving the "quotes" queue and sending the items to a server sent event.
- */
-@GET
-@Produces(MediaType.SERVER_SENT_EVENTS) // <2>
-public Multi<Quote> stream() {
-    return quotes; // <3>
-}
+     * Endpoint retrieving the "quotes" queue and sending the items to a server sent event.
+     */
+    @GET
+    @Produces(MediaType.SERVER_SENT_EVENTS) // <2>
+    public Multi<Quote> stream() {
+        return quotes; // <3>
+    }
 
     /**
      * Endpoint to generate a new quote request id and send it to "quote-requests" AMQP queue using the emitter.

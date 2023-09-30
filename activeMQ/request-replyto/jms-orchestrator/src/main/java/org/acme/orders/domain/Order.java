@@ -1,7 +1,8 @@
 package org.acme.orders.domain;
 import java.util.Random;
+import java.util.UUID;
 
-import org.jgroups.util.UUID;
+
 public class Order {
 
     public static final String PENDING_STATUS = "pending";
@@ -47,7 +48,7 @@ public class Order {
     }
 
     public static Order buildOrder() {
-        return buildOrder(UUID.randomUUID().toString());
+        return buildOrder(UUID.randomUUID().toString().substring(0,8));
     }
     
 

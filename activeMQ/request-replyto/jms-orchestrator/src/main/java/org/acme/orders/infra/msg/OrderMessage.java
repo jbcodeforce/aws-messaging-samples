@@ -1,7 +1,9 @@
 package org.acme.orders.infra.msg;
 
+import java.util.UUID;
+
 import org.acme.orders.domain.Order;
-import org.jgroups.util.UUID;
+
 
 public class OrderMessage {
     
@@ -24,5 +26,15 @@ public class OrderMessage {
         oe.quantity = order.quantity;
         oe.status = order.status;
         return oe;
+    }
+
+    public String toString(){
+        return messageID + "," + orderID + "," + sku + "," + price + "," + quantity + "," + status;
+    }
+
+    public static Order toOrder(OrderMessage om) {
+        Order o = new Order(om.orderID, om.sku, om.price, om.quantity);
+        o.status = om.status;
+        return o;
     }
 }

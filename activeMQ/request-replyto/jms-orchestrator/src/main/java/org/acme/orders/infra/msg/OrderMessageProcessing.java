@@ -7,6 +7,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import org.acme.orders.domain.Order;
+import org.acme.orders.domain.OrderService;
 import org.apache.activemq.artemis.jms.client.ActiveMQConnectionFactory;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.jboss.logging.Logger;
@@ -15,13 +16,16 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.quarkus.runtime.ShutdownEvent;
+import io.quarkus.runtime.StartupEvent;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
 import jakarta.inject.Inject;
 import jakarta.jms.Connection;
 import jakarta.jms.ConnectionFactory;
 import jakarta.jms.JMSException;
+import jakarta.jms.Message;
 import jakarta.jms.MessageConsumer;
+import jakarta.jms.MessageListener;
 import jakarta.jms.MessageProducer;
 import jakarta.jms.Queue;
 import jakarta.jms.Session;
@@ -30,11 +34,8 @@ import jakarta.jms.TextMessage;
  * OrderMessageProcessing is a producer to the orders queue and consumer on replyTo queue
  */
 @ApplicationScoped
-public class OrderMessageProducer implements Runnable {
-    Logger logger = Logger.getLogger(OrderMessageProducer.class.getName());
-    
-    
-    ConnectionFactory connectionFactory;
+public class OrderMessageProcessing implements Runnable, MessageListener {
+    Logger logger = Logger.getLogger(OrderMessageProcessing.class.getName());
 
     @Inject
     @ConfigProperty(name="main.queue.name")
@@ -56,8 +57,12 @@ public class OrderMessageProducer implements Runnable {
     @ConfigProperty(name="quarkus.artemis.password")
     private String password;
 
+    @Inject
+    private OrderService service;
+
     private static ObjectMapper mapper = new ObjectMapper();
     private ScheduledExecutorService scheduler = null;
+    private ConnectionFactory connectionFactory;
     private Connection connection = null;
     private  MessageProducer producer;
     private MessageConsumer consumer;
@@ -71,31 +76,44 @@ public class OrderMessageProducer implements Runnable {
      * One connection to the JMS provider, one session to send message and another one 
      * to asynchronously receive the reply.
      */
-    public void init() throws JMSException {
+    private void init() throws JMSException {
         connectionFactory = new ActiveMQConnectionFactory(connectionURLs);
         connection = connectionFactory.createConnection(user, password);
-        connection.setClientID("j-" + System.currentTimeMillis());
-
-        producerSession = connection.createSession();
-        
-        mainQueue = producerSession.createQueue(mainQueueName);
-        producer = producerSession.createProducer(mainQueue);
-
-        consumerSession = connection.createSession(true,Session.CLIENT_ACKNOWLEDGE);
-        replyToQueue = consumerSession.createQueue(replyToQueueName);
-        
-        messageConsumer = consumerSession.createConsumer(replyToQueue);
-        
+        connection.setClientID("p-" + System.currentTimeMillis());
+        scheduler =Executors.newSingleThreadScheduledExecutor();
+        initProducer();
+        initConsumer();
         connection.start();
           
     }
 
+    private void initProducer() throws JMSException{
+        producerSession = connection.createSession();
+        mainQueue = producerSession.createQueue(mainQueueName);
+        producer = producerSession.createProducer(mainQueue);
+        producer.setTimeToLive(60000); // one minute
+    }
+
+    private void initConsumer() throws JMSException {
+        consumerSession = connection.createSession(true,Session.CLIENT_ACKNOWLEDGE);
+        replyToQueue = consumerSession.createQueue(replyToQueueName);
+        
+        messageConsumer = consumerSession.createConsumer(replyToQueue);
+        messageConsumer.setMessageListener(this);
+        
+    }
+
     /**
      * Use following code to start automatically when app starts 
+     */
     void onStart(@Observes StartupEvent ev) {
-        scheduler.scheduleWithFixedDelay(this, 0L, 5L, TimeUnit.SECONDS);
+        try {
+            init();
+        } catch (JMSException e) {
+            e.printStackTrace();
+        }
     }
-`*/
+
     
 void onStop(@Observes ShutdownEvent ev) {
         if (scheduler != null) 
@@ -128,10 +146,14 @@ void onStop(@Observes ShutdownEvent ev) {
             if ( connection == null) {
                 init();
             }
+            if (producerSession == null ) {
+                initProducer();
+                initConsumer();
+            }
             OrderMessage oe = OrderMessage.fromOrder(order);
             String orderJson= mapper.writeValueAsString(oe);
             TextMessage msg =  producerSession.createTextMessage(orderJson);
-            msg.setJMSCorrelationID(UUID.randomUUID().toString());
+            msg.setJMSCorrelationID(UUID.randomUUID().toString().substring(0,8));
             producer.send( msg);  
         } catch (JsonProcessingException e) {
             e.printStackTrace();
@@ -139,5 +161,21 @@ void onStop(@Observes ShutdownEvent ev) {
             e.printStackTrace();
         }
         
+    }
+
+    @Override
+    public void onMessage(Message msg) {
+       TextMessage rawMsg = (TextMessage) msg;
+       OrderMessage om;
+        try {
+            om = mapper.readValue(rawMsg.getText(),OrderMessage.class);
+            logger.info("Received message: " + om.toString());
+            Order o = OrderMessage.toOrder(om);
+            service.processParticipantResponse(o);
+            msg.acknowledge();
+        }
+        catch (JsonProcessingException | JMSException e) {
+            e.printStackTrace();
+        }
     }
 }
