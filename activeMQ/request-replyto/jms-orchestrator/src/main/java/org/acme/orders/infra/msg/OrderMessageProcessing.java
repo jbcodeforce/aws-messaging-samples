@@ -22,6 +22,7 @@ import jakarta.enterprise.event.Observes;
 import jakarta.inject.Inject;
 import jakarta.jms.Connection;
 import jakarta.jms.ConnectionFactory;
+import jakarta.jms.ExceptionListener;
 import jakarta.jms.JMSException;
 import jakarta.jms.Message;
 import jakarta.jms.MessageConsumer;
@@ -34,7 +35,7 @@ import jakarta.jms.TextMessage;
  * OrderMessageProcessing is a producer to the orders queue and consumer on replyTo queue
  */
 @ApplicationScoped
-public class OrderMessageProcessing implements Runnable, MessageListener {
+public class OrderMessageProcessing implements Runnable, MessageListener, ExceptionListener {
     Logger logger = Logger.getLogger(OrderMessageProcessing.class.getName());
 
     @Inject
@@ -44,6 +45,10 @@ public class OrderMessageProcessing implements Runnable, MessageListener {
     @Inject
     @ConfigProperty(name="replyTo.queue.name")
     public String replyToQueueName;
+
+    @Inject
+    @ConfigProperty(name="reconnect.delay.ins")
+    public int reconnectDelay;
 
     @Inject
     @ConfigProperty(name="quarkus.artemis.url")
@@ -61,7 +66,7 @@ public class OrderMessageProcessing implements Runnable, MessageListener {
     private OrderService service;
 
     private static ObjectMapper mapper = new ObjectMapper();
-    private ScheduledExecutorService scheduler = null;
+    private ScheduledExecutorService simulatorScheduler, reconnectScheduler = null;
     private ConnectionFactory connectionFactory;
     private Connection connection = null;
     private  MessageProducer producer;
@@ -76,15 +81,17 @@ public class OrderMessageProcessing implements Runnable, MessageListener {
      * One connection to the JMS provider, one session to send message and another one 
      * to asynchronously receive the reply.
      */
-    private void init() throws JMSException {
-        connectionFactory = new ActiveMQConnectionFactory(connectionURLs);
-        connection = connectionFactory.createConnection(user, password);
-        connection.setClientID("p-" + System.currentTimeMillis());
-        scheduler =Executors.newSingleThreadScheduledExecutor();
-        initProducer();
-        initConsumer();
-        connection.start();
-          
+    private synchronized void connect() throws JMSException {
+        if (! isConnected()) {
+            connectionFactory = new ActiveMQConnectionFactory(connectionURLs);
+            connection = connectionFactory.createConnection(user, password);
+            connection.setClientID("p-" + System.currentTimeMillis());
+            connection.setExceptionListener(this);
+            initProducer();
+            initConsumer();
+            connection.start();
+            logger.info("Connect to broker succeed");
+        } 
     }
 
     private void initProducer() throws JMSException{
@@ -97,10 +104,27 @@ public class OrderMessageProcessing implements Runnable, MessageListener {
     private void initConsumer() throws JMSException {
         consumerSession = connection.createSession(true,Session.CLIENT_ACKNOWLEDGE);
         replyToQueue = consumerSession.createQueue(replyToQueueName);
-        
         messageConsumer = consumerSession.createConsumer(replyToQueue);
         messageConsumer.setMessageListener(this);
-        
+    }
+
+    private synchronized void disconnect() {
+        closeUtil(consumer);
+        closeUtil(consumerSession);
+        closeUtil(producerSession);
+        closeUtil(connection);
+        consumer = null;
+        producerSession = null;
+        consumerSession = null;
+        connection = null;
+    }
+
+    private void closeUtil(AutoCloseable ac) {
+        try {
+            if (ac != null) ac.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     /**
@@ -108,59 +132,64 @@ public class OrderMessageProcessing implements Runnable, MessageListener {
      */
     void onStart(@Observes StartupEvent ev) {
         try {
-            init();
+            connect();
         } catch (JMSException e) {
             e.printStackTrace();
         }
     }
 
-    
-void onStop(@Observes ShutdownEvent ev) {
-        if (scheduler != null) 
-            scheduler.shutdownNow();
-        if (connection != null)
-			try {
-				connection.close();
-			} catch (JMSException e) {
-				e.printStackTrace();
-			}
+
+    void onStop(@Observes ShutdownEvent ev) {
+        if (simulatorScheduler != null) 
+            simulatorScheduler.shutdownNow();
+        disconnect();
     }
     
 
-    public void start(long delay) {
-        if (scheduler == null) 
-            scheduler = Executors.newSingleThreadScheduledExecutor();
-        scheduler.scheduleWithFixedDelay(this, 0L, delay, TimeUnit.SECONDS);
+    public void startSimulation(long delay) {
+        if (simulatorScheduler == null) 
+            simulatorScheduler = Executors.newSingleThreadScheduledExecutor();
+        simulatorScheduler.scheduleWithFixedDelay(this, 0L, delay, TimeUnit.SECONDS);
     }
 
 
+    /**
+     * Generate an order each time it is called, this is for continuously simulate
+     * order comming. It is for simulation purpose only, and controlled by SimulControl.
+     */
     @Override
     public void run() {
         Order o = Order.buildOrder();
-        sendMessage(o);
+            sendMessage(o);
+
     }
 
-    public void sendMessage(Order order) {
+    public boolean isConnected() {
+        return connection != null 
+            && consumer != null 
+            && producerSession != null 
+            && producer != null
+            && consumerSession != null;
+    }
+
+    public void sendMessage(Order order)  {
        
         try {
-            if ( connection == null) {
-                init();
-            }
-            if (producerSession == null ) {
-                initProducer();
-                initConsumer();
+            if (! isConnected()) {
+                connect();
             }
             OrderMessage oe = OrderMessage.fromOrder(order);
             String orderJson= mapper.writeValueAsString(oe);
             TextMessage msg =  producerSession.createTextMessage(orderJson);
             msg.setJMSCorrelationID(UUID.randomUUID().toString().substring(0,8));
-            producer.send( msg);  
+            producer.send( msg);
+            logger.info("Send message to participant: " + orderJson);
+               
         } catch (JsonProcessingException e) {
             e.printStackTrace();
         } catch (JMSException e) {
             e.printStackTrace();
-        }
-        
+        } 
     }
 
     @Override
@@ -177,5 +206,27 @@ void onStop(@Observes ShutdownEvent ev) {
         catch (JsonProcessingException | JMSException e) {
             e.printStackTrace();
         }
+    }
+
+    @Override
+    public void onException(JMSException arg0) {
+        logger.error("JMS Exception occured: " + arg0.getMessage());
+        disconnect();
+        reconnect(reconnectDelay);
+    }
+
+    private void reconnect(int delay) {
+        if (reconnectScheduler == null) 
+            reconnectScheduler = Executors.newSingleThreadScheduledExecutor();
+        reconnectScheduler.schedule( () -> {
+            try {
+                connect();
+            } catch (JMSException e) {  
+                logger.info("Reconnect to broker fails");
+                disconnect();
+                reconnect(delay + 5);
+            }
+        } , delay, TimeUnit.SECONDS);
+        
     }
 }

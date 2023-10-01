@@ -27,6 +27,14 @@ docker compose -f jms-docker-compose.yml up -d
 * The Active MQ console: [http://localhost:8161/console](http://localhost:8161/).
 * Use the Producer REST API to send n messages. [Producer API](http://localhost:8081/q/swagger-ui), the consumer should get the messages in the logs (`docker logs consumer`).
 
+We can also test within the docker image:
+
+```sh
+docker exec artemis /home/jboss/broker/bin/artemis producer --destination demoqueue   --message-size 1024 --message-count 10
+# in another terminal
+docker exec artemis /home/jboss/broker/bin/artemis consumer --destination demoqueue   --message-count 10 --verbose
+```
+
 ## Demonstration scripts
 
 ## Code Explanation

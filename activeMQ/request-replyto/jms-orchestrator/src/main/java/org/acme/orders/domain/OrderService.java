@@ -9,6 +9,7 @@ import org.jboss.logging.Logger;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import jakarta.jms.JMSException;
 import jakarta.transaction.Transactional;
 
 @ApplicationScoped
@@ -33,9 +34,9 @@ public class OrderService {
     }
 
 
-    public void startOrderSimulation(SimulControl control) {
+    public void startOrderSimulation(SimulControl control)  {
         if (control.delay >0 ) {
-            producer.start(control.delay);
+            producer.startSimulation(control.delay);
         } else if (control.totalMessageToSend > 0) {
             for (int i = 0; i < control.totalMessageToSend; i++) {
                 Order o = Order.buildOrder("order_"+i);

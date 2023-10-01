@@ -1,46 +1,5 @@
 # [Amazon MQ Studies](https://jbcodeforce.github.io/aws-messaging-samples)
 
-
-### Code samples and local test
-
-In development mode we can use docker to run one artemis broker. Start with `docker compose -f artemis-docker-compose.yaml up -d`, and then the different `quarkus dev` under each producer or consumer folder.
-
-We can validate the console at: [http://localhost:8161/console](http://localhost:8161/).
-
-We can also test within the docker image:
-
-```sh
-docker exec artemis /home/jboss/broker/bin/artemis producer --destination demoqueue   --message-size 1024 --message-count 10
-# in another terminal
-docker exec artemis /home/jboss/broker/bin/artemis consumer --destination demoqueue   --message-count 10 --verbose
-```
-
-
-
-
-#### AMQP
-
-The activeMQ folder includes AMQP clients based on the Quarkus guides for AMQP. In pure dev mode, quarkus starts AMQP broker automatically.
-
-```sh
-# in one terminal
-mvn -f amqp-quickstart-producer quarkus:dev
-# in a second terminal
-mvn -f amqp-quickstart-processor quarkus:dev
-```
-
-Open http://localhost:8080/quotes.html in your browser and request some quotes by clicking the button.
-
-With docker compose it uses ActiveMQ image.
-
-```sh
-mvn -f amqp-quickstart-producer clean package
-mvn -f amqp-quickstart-processor clean package
-```
-
-* Deployment to ECR, and run on Fargate
-
-
 Read from [book view](https://jbcodeforce.github.io/aws-messaging-samples)
 
 ## Building this booklet locally

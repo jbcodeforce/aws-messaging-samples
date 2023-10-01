@@ -1,0 +1,1 @@
+curl -X POST 'http://localhost:8081/orders/simulation' -H 'accept: application/json' -H 'Content-Type: application/json' -d'{ "delay": 0, "totalMessageToSend": 10}'
