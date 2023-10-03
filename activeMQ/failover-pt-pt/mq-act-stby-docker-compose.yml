@@ -45,7 +45,7 @@ services:
     ports:
       - "8081:8080"
     depends_on:
-      - active
+      - artemis
     networks:
       - jms-network
 
@@ -60,7 +60,7 @@ services:
     ports:
       - "8080:8080"
     depends_on:
-      - active
+      - artemis
     networks:
       - jms-network
 

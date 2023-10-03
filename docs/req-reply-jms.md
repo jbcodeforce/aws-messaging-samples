@@ -1,19 +1,6 @@
 # JMS based request-replyTo demonstration
 
-
-This is a simple example of request-response on two queues:
-
-![](./diagrams/req-replyto.drawio.png)
-
-This code use client acknowledgement, and replyTo queue. It does not use CDI for bean injection but code base instantiation of the ConnectionFactor.
-
-## Requirements
-
-* Expose GET, POST, PUT `/orders` api
-* Mockup a repository in memory
-* On POST or PUT operations, order messages are sent to another service (the participant) to act on them via a `orders` queue, and get the response to `orders-reply` queue.
-* Support once and only once semantic
-* Expose a POST /orders/simulation to run n order creation with random data, to support a failover demonstration.
+The application is the same as the classic implementation as described in [this note](./classic-req-reply-jms.md), except it uses the Artemis release with Jakarta JMS 3.0 API.
 
 ## Running Locally
 
@@ -28,7 +15,7 @@ While in development mode, under the `activeMQ/request-replyto` folder:
     cd jms-participant
     quarkus dev
     ```
-    
+
 1. Orchestrator Application URL: [http://localhost:8081/](http://localhost:8081/) and swagger-ui
 1. See ActiveMQ console: [http://localhost:8161/](http://localhost:8161/), admin/adminpassw0rd
 
@@ -59,13 +46,25 @@ While in development mode, under the `activeMQ/request-replyto` folder:
 
 1. We can see the state of the queues in the ActiveMQ Console
 
-![](./images/active-queues.png)
+    ![](./images/active-queues.png)
+
+1. To demonstrate connection failure and reconnect, start a long runnning simulation, stop the broker and relaunch it. The messages should continue to flow between the stop apps. Be sure to have build the producer and consumer images. Here are the commands:
+
+    ```sh
+    # build OCI image for participant and orchestrator app
+    
+    request-replyto $: docker compose up -d
+    docker ps
+    # 3cd51215160f   quay.io/artemiscloud/activemq-artemis-broker  0.0.0.0:5672->5672/tcp, 8080/tcp, 0.0.0.0:8161->8161/tcp, 0.0.0.0:61616->61616/tcp, 8443/tcp   artemis
+    
+    ```
+
 
 ## Code Explanation
 
 The code is under [jms-orchestrator](./activeMQ/request-replyto/jms-orchestrator/) and [jms-participant](./activeMQ/request-replyto/jms-participant), to implement a request-response over queue using JMS.
 
-The Orchestrator is a classical microservice with the order entity as resource. The interesting part is the `OrderMessageProcessing` class. It is JMS implementation code, using one connection to the broker and two JMS session, one for the producer and one for the consumer.
+The Orchestrator is a classical microservice with the order entity as resource. The interesting part is the `OrderMessageProcessing` class. It is JMS implementation code, using one connection to the broker and two JMS sessions, one for the producer and one for the consumer.
 
 ```java
 connectionFactory = new ActiveMQConnectionFactory(connectionURLs);

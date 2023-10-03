@@ -1,0 +1,65 @@
+version: '2'
+
+services:
+  artemis:
+    image: quay.io/artemiscloud/activemq-artemis-broker
+    hostname: artemis
+    container_name: artemis
+    ports:
+      - "8161:8161"
+      - "61616:61616"
+      - "5672:5672"
+    environment:
+      AMQ_USER: admin
+      AMQ_PASSWORD: adminpassw0rd
+      AMQ_EXTRA_ARGS: "--relax-jolokia"
+    networks:
+      - jms-network
+  standby:
+    image: quay.io/artemiscloud/activemq-artemis-broker
+    hostname: standby
+    container_name: standby
+    ports:
+      - "8162:8161"
+      - "61617:61616"
+      - "5673:5672"
+    environment:
+      AMQ_USER: admin
+      AMQ_PASSWORD: adminpassw0rd
+      AMQ_EXTRA_ARGS: "--relax-jolokia"
+    volumes:
+      - ./config/broker-2.xml:/opt/amq/conf/broker.xml
+    networks:
+      - jms-network
+  orchestrator:
+    image: jbcodeforce/jms-orchestrator
+    container_name: orchestrator
+    hostname: orchestrator
+    environment:
+      QUARKUS_ARTEMIS_URL: (tcp://artemis:61616,tcp://standby:61617)?randomize=false
+      QUARKUS_ARTEMIS_USERNAME: admin
+      QUARKUS_ARTEMIS_PASSWORD: adminpassw0rd
+    ports:
+      - "8081:8080"
+    depends_on:
+      - artemis
+    networks:
+      - jms-network
+
+  participant:
+    image: jbcodeforce/jms-participant
+    hostname: participant
+    container_name: participant
+    environment:
+      QUARKUS_ARTEMIS_URL: (tcp://artemis:61616,tcp://standby:61617)?randomize=false
+      QUARKUS_ARTEMIS_USERNAME: admin
+      QUARKUS_ARTEMIS_PASSWORD: adminpassw0rd
+    ports:
+      - "8080:8080"
+    depends_on:
+      - artemis
+    networks:
+      - jms-network
+networks:
+  jms-network:
+    name: jms

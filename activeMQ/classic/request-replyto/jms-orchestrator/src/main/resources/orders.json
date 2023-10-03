@@ -1,0 +1,18 @@
+[
+    { "orderID" : "Order01",
+       "sku" : "P01",
+        "quantity": 10,
+        "price": 200.00,
+        "status" : "assigned",
+        "creationDate": "2023/08/14",
+        "updateDate": "2023/08/14"
+    },
+    { "orderID" : "Order02",
+    "sku" : "P03",
+     "quantity": 33,
+     "price": 620.00,
+     "status" : "assigned",
+     "creationDate": "2023/08/15",
+     "updateDate": "2023/08/15"
+ }
+]

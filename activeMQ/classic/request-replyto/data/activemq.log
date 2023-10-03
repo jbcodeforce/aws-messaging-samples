@@ -1,0 +1,28 @@
+2023-10-03 05:08:47,005 | INFO  | Using Persistence Adapter: KahaDBPersistenceAdapter[/tmp/mq/kahadb/kahadb] | org.apache.activemq.broker.BrokerService | main
+2023-10-03 05:08:47,089 | INFO  | Starting Persistence Adapter: KahaDBPersistenceAdapter[/tmp/mq/kahadb/kahadb] | org.apache.activemq.broker.BrokerService | main
+2023-10-03 05:08:47,217 | INFO  | Database /tmp/mq/kahadb/kahadb/lock is locked by another server. This broker is now in slave mode waiting a lock to be acquired | org.apache.activemq.store.SharedFileLocker | main
+ase | main
+2023-10-03 05:08:48,482 | INFO  | Starting Temp Data Store | org.apache.activemq.broker.BrokerService | main
+2023-10-03 05:08:48,488 | INFO  | PListStore:[/tmp/mq/kahadb/localhost/tmp_storage] started | org.apache.activemq.store.kahadb.plist.PListStoreImpl | main
+2023-10-03 05:08:48,489 | INFO  | Starting Job Scheduler Store | org.apache.activemq.broker.BrokerService | main
+2023-10-03 05:08:48,491 | INFO  | Persistence Adapter successfully started | org.apache.activemq.broker.BrokerService | main
+2023-10-03 05:08:48,929 | INFO  | Apache ActiveMQ 5.18.2 (localhost, ID:active-45033-1696309728572-0:1) is starting | org.apache.activemq.broker.BrokerService | main
+2023-10-03 05:08:49,094 | INFO  | Listening for connections at: tcp://active:61616?maximumConnections=1000&wireFormat.maxFrameSize=104857600 | org.apache.activemq.transport.TransportServerThreadSupport | main
+2023-10-03 05:08:49,100 | INFO  | Connector openwire started | org.apache.activemq.broker.TransportConnector | main
+2023-10-03 05:08:49,122 | INFO  | Listening for connections at: amqp://active:5672?maximumConnections=1000&wireFormat.maxFrameSize=104857600 | org.apache.activemq.transport.TransportServerThreadSupport | main
+2023-10-03 05:08:49,126 | INFO  | Connector amqp started | org.apache.activemq.broker.TransportConnector | main
+2023-10-03 05:08:49,146 | INFO  | Listening for connections at: stomp://active:61613?maximumConnections=1000&wireFormat.maxFrameSize=104857600 | org.apache.activemq.transport.TransportServerThreadSupport | main
+2023-10-03 05:08:49,151 | INFO  | Connector stomp started | org.apache.activemq.broker.TransportConnector | main
+2023-10-03 05:08:49,168 | INFO  | Listening for connections at: mqtt://active:1883?maximumConnections=1000&wireFormat.maxFrameSize=104857600 | org.apache.activemq.transport.TransportServerThreadSupport | main
+2023-10-03 05:08:49,172 | INFO  | Connector mqtt started | org.apache.activemq.broker.TransportConnector | main
+2023-10-03 05:08:49,197 | INFO  | Starting Jetty server | org.apache.activemq.transport.WebTransportServerSupport | main
+2023-10-03 05:08:49,538 | INFO  | Creating Jetty connector | org.apache.activemq.transport.WebTransportServerSupport | main
+2023-10-03 05:08:49,829 | WARN  | ServletContext@o.e.j.s.ServletContextHandler@60325987{/,null,STARTING} has uncovered http methods for path: / | org.eclipse.jetty.security.SecurityHandler | main
+2023-10-03 05:08:50,188 | INFO  | Listening for connections at ws://active:61614?maximumConnections=1000&wireFormat.maxFrameSize=104857600 | org.apache.activemq.transport.ws.WSTransportServer | main
+2023-10-03 05:08:50,191 | INFO  | Connector ws started | org.apache.activemq.broker.TransportConnector | main
+2023-10-03 05:08:50,193 | INFO  | Apache ActiveMQ 5.18.2 (localhost, ID:active-45033-1696309728572-0:1) started | org.apache.activemq.broker.BrokerService | main
+2023-10-03 05:08:50,194 | INFO  | For help or more information please see: http://activemq.apache.org | org.apache.activemq.broker.BrokerService | main
+2023-10-03 05:08:50,268 | WARN  | Store limit is 102400 mb (current store usage is 0 mb). The data directory: /tmp/mq/kahadb/kahadb only has 17198 mb of usable space. - resetting to maximum available disk space: 17198 mb | org.apache.activemq.broker.BrokerService | main
+2023-10-03 05:08:50,305 | WARN  | Temporary Store limit is 51200 mb (current store usage is 0 mb). The data directory: /tmp/mq/kahadb only has 17198 mb of usable space. - resetting to maximum available disk space: 17198 mb | org.apache.activemq.broker.BrokerService | main
+2023-10-03 05:08:56,028 | INFO  | ActiveMQ WebConsole available at http://0.0.0.0:8161/ | org.apache.activemq.web.WebConsoleStarter | main
+2023-10-03 05:08:56,031 | INFO  | ActiveMQ Jolokia REST API available at http://0.0.0.0:8161/api/jolokia/ | org.apache.activemq.web.WebConsoleStarter | main

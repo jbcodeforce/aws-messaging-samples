@@ -41,7 +41,7 @@ public class Order {
     public static Order buildOrder(String oid) {
         int q = random.nextInt(10);
         
-        double p = random.nextDouble(600) * q;
+        double p = random.nextDouble() * 600 * q;
 
         return new Order(oid,skus[random.nextInt(skus.length)], p, q);  
         

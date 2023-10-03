@@ -8,7 +8,8 @@ nav:
     - AWS Console: aws-console-lab.md
     - ActiveMQ with CDK: activemq-cdk.md
     - JMS pt-to-pt: pt-to-pt-jms.md
-    - JMS Req-ReplyTo: req-reply-jms.md
+    - ActiveMQ classic JMS Req-ReplyTo: classic-req-reply-jms.md
+    - Artemis JMS Req-ReplyTo: req-reply-jms.md
     - Failover pt-to-pt: failover-lab.md
   - Amazon MQ notes: https://jbcodeforce.github.io/aws-studies/infra/messaging/#amazon-mq
 theme: 

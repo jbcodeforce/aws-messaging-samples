@@ -3,13 +3,12 @@ package org.acme.orders.domain;
 import java.util.UUID;
 
 import org.acme.orders.infra.api.SimulControl;
-import org.acme.orders.infra.msg.OrderMessageProcessing;
+import org.acme.orders.infra.msg.OrderMessageProcessor;
 import org.acme.orders.infra.repo.OrderRepository;
 import org.jboss.logging.Logger;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import jakarta.jms.JMSException;
 import jakarta.transaction.Transactional;
 
 @ApplicationScoped
@@ -19,7 +18,7 @@ public class OrderService {
     @Inject
     OrderRepository orderRepository;
     @Inject
-    OrderMessageProcessing producer;
+    OrderMessageProcessor producer;
     
     @Transactional
     public Order processOrder(Order newOrder) {
@@ -41,6 +40,11 @@ public class OrderService {
             for (int i = 0; i < control.totalMessageToSend; i++) {
                 Order o = Order.buildOrder("order_"+i);
                 producer.sendMessage(o);
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
             }
         }
     }
