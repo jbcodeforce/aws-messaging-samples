@@ -1,25 +1,12 @@
 package org.acme.orders.infra.msg;
 
 
+import java.io.IOException;
 import java.util.UUID;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-import org.acme.orders.domain.Order;
-import org.acme.orders.domain.OrderService;
-
-import org.eclipse.microprofile.config.inject.ConfigProperty;
-import org.jboss.logging.Logger;
-
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.activemq.ActiveMQConnectionFactory;
-import io.quarkus.runtime.ShutdownEvent;
-import io.quarkus.runtime.StartupEvent;
-import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.enterprise.event.Observes;
-import jakarta.inject.Inject;
 import javax.jms.Connection;
 import javax.jms.ConnectionFactory;
 import javax.jms.ExceptionListener;
@@ -31,11 +18,28 @@ import javax.jms.MessageProducer;
 import javax.jms.Queue;
 import javax.jms.Session;
 import javax.jms.TextMessage;
+
+import org.acme.orders.domain.Order;
+import org.acme.orders.domain.OrderService;
+import org.apache.activemq.ActiveMQConnection;
+import org.apache.activemq.ActiveMQConnectionFactory;
+import org.apache.activemq.transport.TransportListener;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
+import org.jboss.logging.Logger;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import io.quarkus.runtime.ShutdownEvent;
+import io.quarkus.runtime.StartupEvent;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.event.Observes;
+import jakarta.inject.Inject;
 /**
  * OrderMessageProcessing is a producer to the orders queue and consumer on replyTo queue
  */
 @ApplicationScoped
-public class OrderMessageProcessor implements Runnable, MessageListener, ExceptionListener {
+public class OrderMessageProcessor implements Runnable, MessageListener, ExceptionListener, TransportListener {
     Logger logger = Logger.getLogger(OrderMessageProcessor.class.getName());
 
     @Inject
@@ -77,22 +81,25 @@ public class OrderMessageProcessor implements Runnable, MessageListener, Excepti
     private MessageConsumer messageConsumer;
     private Session producerSession;
     private Session consumerSession;
-
+    private boolean isLeveragingFailoverProtocol = false;
     /*
      * One connection to the JMS provider, one session to send message and another one 
      * to asynchronously receive the reply.
      */
-    private synchronized void connect() throws JMSException {
-        if (! isConnected()) {
+    private synchronized void restablishConnection() throws JMSException {
+        if (connection == null) {
             connectionFactory = new ActiveMQConnectionFactory(connectionURLs);
             connection = connectionFactory.createConnection(user, password);
             connection.setClientID("p-" + System.currentTimeMillis());
             connection.setExceptionListener(this);
-            initProducer();
-            initConsumer();
-            connection.start();
-            logger.info("Connect to broker succeed");
+            ((ActiveMQConnection) connection).addTransportListener(this);
         } 
+        if (producer == null || producerSession == null)
+            initProducer();
+        if (consumer == null || consumerSession == null) 
+            initConsumer();
+        connection.start();
+        logger.info("Connect to broker succeed");
     }
 
     private void initProducer() throws JMSException{
@@ -113,10 +120,12 @@ public class OrderMessageProcessor implements Runnable, MessageListener, Excepti
         closeUtil(consumer);
         closeUtil(consumerSession);
         closeUtil(producerSession);
+        closeUtil(producer);
         closeUtil(connection);
         consumer = null;
         producerSession = null;
         consumerSession = null;
+        producer = null;
         connection = null;
     }
 
@@ -133,7 +142,10 @@ public class OrderMessageProcessor implements Runnable, MessageListener, Excepti
      */
     void onStart(@Observes StartupEvent ev) {
         try {
-            connect();
+            restablishConnection();
+            if (connectionURLs.contains("failover")){
+                isLeveragingFailoverProtocol=true;
+            }
         } catch (JMSException e) {
             e.printStackTrace();
         }
@@ -169,15 +181,14 @@ public class OrderMessageProcessor implements Runnable, MessageListener, Excepti
         return connection != null 
             //&& consumer != null 
             && producerSession != null 
-            && producer != null
             && consumerSession != null;
     }
 
     public void sendMessage(Order order)  {
        
         try {
-            if (! isConnected()) {
-                connect();
+            if (! isLeveragingFailoverProtocol &&  ! isConnected()) {
+                restablishConnection();
             }
             OrderMessage oe = OrderMessage.fromOrder(order);
             String orderJson= mapper.writeValueAsString(oe);
@@ -215,8 +226,8 @@ public class OrderMessageProcessor implements Runnable, MessageListener, Excepti
     
 
     @Override
-    public void onException(JMSException arg0) {
-        logger.error("JMS Exception occured: " + arg0.getMessage());
+    public void onException(JMSException e) {
+        logger.error("JMS Exception occured: " + e.getMessage());
         disconnect();
         reconnect(reconnectDelay);
     }
@@ -226,7 +237,7 @@ public class OrderMessageProcessor implements Runnable, MessageListener, Excepti
             reconnectScheduler = Executors.newSingleThreadScheduledExecutor();
         reconnectScheduler.schedule( () -> {
             try {
-                connect();
+                restablishConnection();
             } catch (JMSException e) {  
                 logger.info("Reconnect to broker fails, retrying in " + delay + " s.");
                 disconnect();
@@ -234,5 +245,27 @@ public class OrderMessageProcessor implements Runnable, MessageListener, Excepti
             }
         } , delay, TimeUnit.SECONDS);
         
+    }
+
+    @Override
+    public void onCommand(Object arg0) {
+        // not sure what to do.. order a pizza
+        throw new UnsupportedOperationException("Unimplemented method 'onCommand'");
+    }
+
+    @Override
+    public void onException(IOException arg0) {
+        disconnect();
+        reconnect(reconnectDelay);
+    }
+
+    @Override
+    public void transportInterupted() {
+        logger.debug("Transport interrupted ... it should recover...");
+    }
+
+    @Override
+    public void transportResumed() {
+        logger.debug("Transport resumed ... we were right to wait...");
     }
 }

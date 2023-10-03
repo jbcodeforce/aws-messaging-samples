@@ -1,6 +1,6 @@
-# [Amazon MQ Studies](https://jbcodeforce.github.io/aws-messaging-samples)
+# [Amazon MQ Studies](https://jbcodeforce.github.io/aws-messaging-study)
 
-Read from [book view](https://jbcodeforce.github.io/aws-messaging-samples)
+Read from [book view](https://jbcodeforce.github.io/aws-messaging-study)
 
 ## Building this booklet locally
 
@@ -8,8 +8,8 @@ The content of this repository is written with markdown files, packaged with [Mk
 
 1. Install MkDocs locally following the [official documentation instructions](https://www.mkdocs.org/#installation).
 1. Install Material plugin for mkdocs:  `pip install mkdocs-material` 
-2. `git clone https://github.com/jbcodeforce/aws-messaging-samples.git` _(or your forked repository if you plan to edit)_
-3. `cd aws-studies`
+2. `git clone https://github.com/jbcodeforce/aws-messaging-study.git` _(or your forked repository if you plan to edit)_
+3. `cd aws-messaging-study`
 4. `mkdocs serve`
 5. Go to `http://127.0.0.1:8000/` in your browser.
 

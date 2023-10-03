@@ -1,21 +1,10 @@
 package org.acme.participant.infra.msg;
 
+import java.io.IOException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.activemq.ActiveMQConnectionFactory;
-import org.eclipse.microprofile.config.inject.ConfigProperty;
-import org.jboss.logging.Logger;
-
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
-import io.quarkus.runtime.ShutdownEvent;
-import io.quarkus.runtime.StartupEvent;
-import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.enterprise.event.Observes;
-import jakarta.inject.Inject;
 import javax.jms.Connection;
 import javax.jms.ConnectionFactory;
 import javax.jms.ExceptionListener;
@@ -28,11 +17,26 @@ import javax.jms.Queue;
 import javax.jms.Session;
 import javax.jms.TextMessage;
 
+import org.apache.activemq.ActiveMQConnection;
+import org.apache.activemq.ActiveMQConnectionFactory;
+import org.apache.activemq.transport.TransportListener;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
+import org.jboss.logging.Logger;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import io.quarkus.runtime.ShutdownEvent;
+import io.quarkus.runtime.StartupEvent;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.event.Observes;
+import jakarta.inject.Inject;
+
 /**
  * A OrderMessage Consumer to participate to the order process asynchrnously
  */
 @ApplicationScoped
-public class OrderMessageParticipantProcessor implements MessageListener, ExceptionListener {
+public class OrderMessageParticipantProcessor implements MessageListener, ExceptionListener, TransportListener {
     Logger logger = Logger.getLogger(OrderMessageParticipantProcessor.class.getName());
     
     @Inject
@@ -53,6 +57,7 @@ public class OrderMessageParticipantProcessor implements MessageListener, Except
     @Inject
     @ConfigProperty(name="quarkus.artemis.password")
     private String password;
+    private boolean isLeveragingFailoverProtocol = false;
 
     private ScheduledExecutorService reconnectScheduler = null;
     private static ObjectMapper mapper = new ObjectMapper();
@@ -67,24 +72,26 @@ public class OrderMessageParticipantProcessor implements MessageListener, Except
     private Session consumerSession;
 
 
-    private synchronized void connect() throws JMSException {
-        if (! isConnected()) {
+    private synchronized void restablishConnection() throws JMSException {
+        if (connection == null) {
             connectionFactory = new ActiveMQConnectionFactory(connectionURLs);
             connection = connectionFactory.createConnection(user, password);
             connection.setClientID("p-" + System.currentTimeMillis());
             connection.setExceptionListener(this);
-            initProducer();
-            initConsumer();
-            connection.start();
-            logger.info("Connect to broker succeed");
+            ((ActiveMQConnection) connection).addTransportListener(this);
         } 
+        if (producer == null || producerSession == null)
+            initProducer();
+        if (consumer == null || consumerSession == null) 
+            initConsumer();
+       
+        connection.start();
+        logger.info("Connect to broker succeed");
     }
 
     public boolean isConnected() {
         return connection != null 
-            && consumer != null 
             && producerSession != null 
-            && producer != null
             && consumerSession != null;
     }
 
@@ -106,7 +113,10 @@ public class OrderMessageParticipantProcessor implements MessageListener, Except
     void onStart(@Observes StartupEvent ev) {
         logger.info("Started");
         try {
-            connect();
+            restablishConnection();
+            if (connectionURLs.contains("failover")){
+                isLeveragingFailoverProtocol=true;
+            }
         } catch (JMSException e) {
             e.printStackTrace();
         }
@@ -120,10 +130,12 @@ public class OrderMessageParticipantProcessor implements MessageListener, Except
         closeUtil(consumer);
         closeUtil(consumerSession);
         closeUtil(producerSession);
+        closeUtil(producer);
         closeUtil(connection);
         consumer = null;
         producerSession = null;
         consumerSession = null;
+        producer = null;
         connection = null;
     }
 
@@ -144,8 +156,8 @@ public class OrderMessageParticipantProcessor implements MessageListener, Except
        TextMessage rawMsg = (TextMessage) msg;
        OrderMessage om;
     try {
-        if (! isConnected()) {
-            connect();
+        if (! isLeveragingFailoverProtocol &&  ! isConnected()) {
+            restablishConnection();
         }
         om = mapper.readValue(rawMsg.getText(),OrderMessage.class);
         logger.info("Received message: " + om.toString());
@@ -159,8 +171,7 @@ public class OrderMessageParticipantProcessor implements MessageListener, Except
     } catch (JsonProcessingException e) {
         e.printStackTrace();
     } catch ( JMSException e) {
-        disconnect();
-        reconnect(reconnectDelay);
+        e.printStackTrace();
     }
     }
 
@@ -176,7 +187,7 @@ public class OrderMessageParticipantProcessor implements MessageListener, Except
             reconnectScheduler = Executors.newSingleThreadScheduledExecutor();
         reconnectScheduler.schedule( () -> {
             try {
-                connect();
+                restablishConnection();
             } catch (JMSException e) {  
                 logger.info("Reconnect to broker fails, retrying in " + delay + " s.");
                 disconnect();
@@ -184,6 +195,28 @@ public class OrderMessageParticipantProcessor implements MessageListener, Except
             }
         } , delay, TimeUnit.SECONDS);
         
+    }
+
+    @Override
+    public void onCommand(Object arg0) {
+        // not sure what to do.. order a pizza
+        throw new UnsupportedOperationException("Unimplemented method 'onCommand'");
+    }
+
+    @Override
+    public void onException(IOException arg0) {
+        disconnect();
+        reconnect(reconnectDelay);
+    }
+
+    @Override
+    public void transportInterupted() {
+        logger.debug("Transport interrupted ... it should recover...");
+    }
+
+    @Override
+    public void transportResumed() {
+        logger.debug("Transport resumed ... we were right to wait...");
     }
 
 }

@@ -102,8 +102,51 @@ The [Artemis product documentation HA chapter](https://activemq.apache.org/compo
 
 ???- question "What needs to be done to migrate to Artemis"
     As of today Amazon MQ, Active MQ supports on Classic deployment and API. Moving to Artemis, most of the JMS code will work. The project dependencies need to be changed, the ActiveMQ connection factory class is different in term of package names, and if you use Jakarta JMS then package needs to be changed in the JMS producer and consumer classes.
+
 ???- question "What is the advantage of replicas vs shared storage?"
     Shared storage needs to get SAN replication to ensure DR at the storage level. If not the broker file system is a single point of failure. It adds cost to the solution but it performs better. Replicas is ActiveMQ integrate solution to ensure High availability and sharing data between brokers. Slave broker copies data from Master. States of the brokers are not exchanged with replicas, only messages are. For Classic JDBC message store could be used. Database replication is then using for DR. When non durable queue or topic are networked, with failure, inflight messages may be lost.
+
+???- question "What is the difference between URL failover and implementing an ExceptionListener?"
+    JMS has no specification on failover for JMS provider. When broker fails, there will be a connection Exception. The way to manage this exception is to use the asynchronous `ExceptionListener` interface which will give developer maximum control over when to reconnect, assessing what type of JMS error to better act on the error. ActiveMQ offers the failover transport protocol, is for connection failure, and let the client app to reconnect to another broker as part of the URL declaration. Sending message to the broker will be blocked until the connection is restored. Use `TransportListener` interface to understand what is happening. This is a good way to add logging to the application to report on the connection state.
+
+???- question "what are the critical metrics / log patterns that should be monitored in respect to MQ logs?"
+    
+
+???- question "When messages are moved to DLQ?"
+    Producer app can set setTimeToLive with millisecond parameter. When the message has not being delivered to consumer, ActiveMQ move it to an expiry address, which could be mapped to a dead-letter queue. In fact a TTL set on a producer, will make ActiveMQ creating an `ActiveMQ.DLQ` queue. It is recommended to setup a DLQ per queue or may be per pair of request/response queues. ActiveMQ will *never* expire messages sent to the DLQ. See [product documentation](https://activemq.apache.org/message-redelivery-and-dlq-handling.html)
+
+    ```xml
+    <policyEntry queue="order*">
+        <deadLetterStrategy>
+            <individualDeadLetterStrategy queuePrefix="DLQ." useQueueForQueueMessages="true"/>
+        </deadLetterStrategy>
+    </policyEntry>
+    ```
+    Use the `<deadLetterStrategy> <sharedDeadLetterStrategy processExpired="false" />` to disable DLQ processing.
+
+???- question "What is the constantPendingMessageLimitStrategy parameter?"
+    When consumers are slow to process message from topic, and the broker is not persisting message, then messages in the RAM will impact consumer and producer performance. This parameter specifies how many messages to keep and let old messages being replace by new ones. See [slow consumer section]( http://activemq.apache.org/slow-consumer-handling.html) of the product documentation.
+
+???- question "How to connect to MQ from different vpc or from on-premises?"
+    This [Creating static custom domain endpoints with Amazon MQ for RabbitMQ](https://aws.amazon.com/blogs/compute/creating-static-custom-domain-endpoints-with-amazon-mq-for-rabbitmq/) blog presents SSL and DNS resolution to access an NLB to facade brokers. Also the [NLB can be used cross VPCs](https://repost.aws/questions/QUlIpLMYz7Q7W86iJlZJywZw/questions/QUlIpLMYz7Q7W86iJlZJywZw/configure-network-load-balancer-across-vpcs?) that are peered. Need NLB for broker specific TCP based protocol. Security group in the broker specify inbound traffic from the NLB only. NLB target group uses the broker static VPC endpoint address. NLB can also restrict who can acccess it.
+
+???- question "Broker clustering"
+    Brokers in a cluster can share the message processing, each broker manages its own storage and connections. A core bridge is automatically created. When message arrives it will be send to one of the broker in a round-robin fashion. It can also distribute to brokers that have active consumers. There are different topologies supported: symmetric cluster where all nodes are connected to each other, or chain cluster where node is connected to two neighbores, . With a symmetric cluster each node knows about all the queues that exist on all the other nodes and what consumers they have.
+
+???- question "What are the metrics to assess to decide to move to server mesh topology?"
+
+???- question "Configuring Transport"
+    **Acceptor** defines a way in which connections can be made to ActiveMQ broker. Here is one example: 
+    ```xml
+      <acceptor name="artemis">tcp://172.19.0.2:61616?tcpSendBufferSize=1048576;tcpReceiveBufferSize=1048576;amqpMinLargeMessageSize=102400;protocols=CORE,AMQP,STOMP,HORNETQ,MQTT,OPENWIRE;useEpoll=true;amqpCredits=1000;amqpLowCredits=300;amqpDuplicateDetection=true;supportAdvisory=false;suppressInternalManagementObjects=false</acceptor>
+    ```
+    **Connectors** define how to connect to the brokers, used when brokers are in cluster or bridged. When a client app, using ClientSessionFactory, uses indirectly connector.
+
+
+???- question "What the log pattern to monitoring in CloudWatch?"
+
+???- question "How to be quickly aware of broker is rebooting?"
+
 
 ## To address
 

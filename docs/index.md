@@ -1,5 +1,8 @@
 # Introduction
 
+!!! info "Documentation Updates"
+    Creation date: September 2023 - Updated 10/03/2023
+
 This repository includes a set of demo applications and IaC to create Amazon MQ with different engine types. 
 
 The AWS MQ workshops contain a lot of information to get started with Amazon MQ. This repositoryy addresses some of the specific subjects not covered in detail in those workshops: JMS programming model, separation of application, different ActiveMQ release, supports running locally with docker. Unit testing, integration test, reactive messaging and reactive programming.
@@ -16,15 +19,18 @@ Active MQ is an Open Source software, multi-protocol, java based message broker.
 * [Point to Point JMS based producer and consumer - ActiveMQ Artemis release](./pt-to-pt-jms.md)
 * [Request-ReplyTo order ochestrator and participant based on JMS - ActiveMQ Artemis release](./req-reply-jms.md)
 * [AMQP Quarkus app point to point - ActiveMQ Artemis release](./amq-activemq.md)
+* [Infrastructure as code - VPC stack]()
 
 ### AWS Samples
 
 * [Github amazon-mq-workshop](https://github.com/aws-samples/amazon-mq-workshop/tree/master)
-* [Github Amazon MQ Network of Brokers](https://github.com/aws-samples/aws-mq-network-of-brokers)
+* [Github Amazon MQ Network of Brokers samples](https://github.com/aws-samples/aws-mq-network-of-brokers)
 
 ## [Rabbit MQ](https://www.rabbitmq.com/)
 
 The other Open Source project.
+
+To Be done.
 
 ## Interesting content to read
 

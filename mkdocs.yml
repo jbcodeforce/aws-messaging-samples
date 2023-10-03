@@ -1,5 +1,5 @@
 site_name: AWS Messaging Studies
-repo_url: https://github.com/jbcodeforce/aws-messaging-samples.git
+repo_url: https://github.com/jbcodeforce/aws-messaging-study.git
 site_author: Jerome Boyer
 nav:
   - Introduction: index.md
