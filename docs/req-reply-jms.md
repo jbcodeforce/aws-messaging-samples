@@ -48,16 +48,7 @@ While in development mode, under the `activeMQ/request-replyto` folder:
 
     ![](./images/active-queues.png)
 
-1. To demonstrate connection failure and reconnect, start a long runnning simulation, stop the broker and relaunch it. The messages should continue to flow between the stop apps. Be sure to have build the producer and consumer images. Here are the commands:
 
-    ```sh
-    # build OCI image for participant and orchestrator app
-    
-    request-replyto $: docker compose up -d
-    docker ps
-    # 3cd51215160f   quay.io/artemiscloud/activemq-artemis-broker  0.0.0.0:5672->5672/tcp, 8080/tcp, 0.0.0.0:8161->8161/tcp, 0.0.0.0:61616->61616/tcp, 8443/tcp   artemis
-    
-    ```
 
 
 ## Code Explanation
@@ -114,7 +105,8 @@ Each consumer performs acknowledgement by code. Acknowledging a consumed message
     docker push toECR_repository
     ```
 
-1. If not already done, use CDK to deploy VPC, Brokers, and Cloud9.
+1. If not already done, use CDK to deploy VPC, Brokers
+1. Optional create a Cloud9 environment in the public subnet
 1. Use CDK to deploy the two apps on ECS Fargate.
 
     ```sh

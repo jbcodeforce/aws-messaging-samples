@@ -29,9 +29,9 @@ services:
       - "61626:61616"
       - "5682:5672"
     environment:
-      AMQ_USER: admin
-      AMQ_PASSWORD: adminpassw0rd
-      AMQ_EXTRA_ARGS: "--relax-jolokia"
+      ACTIVEMQ_USER: admin
+      ACTIVEMQ_PASSWORD: adminpassw0rd
+      ACTIVEMQ_EXTRA_ARGS: "--relax-jolokia"
       ACTIVEMQ_DATA: /tmp/mq/kahadb
     volumes:
       - ./config/broker-2.xml:/opt/amq/conf/activemq.xml
@@ -46,13 +46,12 @@ services:
     container_name: orchestrator
     hostname: orchestrator
     environment:
-      QUARKUS_ARTEMIS_URL: failover:(tcp://active:61616,tcp://standby:61617)?randomize=false
+      QUARKUS_ARTEMIS_URL: failover:(tcp://active:61616,tcp://standby:61626)?randomize=false
       QUARKUS_ARTEMIS_USERNAME: admin
       QUARKUS_ARTEMIS_PASSWORD: adminpassw0rd
     ports:
       - "8081:8080"
     depends_on:
-      - active
       - standby
     networks:
       - jms-network
@@ -62,7 +61,7 @@ services:
     hostname: participant
     container_name: participant
     environment:
-      QUARKUS_ARTEMIS_URL: failover:(tcp://active:61616,tcp://standby:61617)?randomize=false
+      QUARKUS_ARTEMIS_URL: failover:(tcp://active:61616,tcp://standby:61626)?randomize=false
       QUARKUS_ARTEMIS_USERNAME: admin
       QUARKUS_ARTEMIS_PASSWORD: adminpassw0rd
     ports:

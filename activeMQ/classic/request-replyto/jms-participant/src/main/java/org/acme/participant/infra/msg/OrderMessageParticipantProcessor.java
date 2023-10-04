@@ -200,23 +200,24 @@ public class OrderMessageParticipantProcessor implements MessageListener, Except
     @Override
     public void onCommand(Object arg0) {
         // not sure what to do.. order a pizza
-        throw new UnsupportedOperationException("Unimplemented method 'onCommand'");
+        logger.debug("Unimplemented method 'onCommand'");
     }
 
     @Override
     public void onException(IOException arg0) {
+        logger.info("Exception from transport protocol");
         disconnect();
         reconnect(reconnectDelay);
     }
 
     @Override
     public void transportInterupted() {
-        logger.debug("Transport interrupted ... it should recover...");
+        logger.info("Transport interrupted ... it should recover...");
     }
 
     @Override
     public void transportResumed() {
-        logger.debug("Transport resumed ... we were right to wait...");
+        logger.info("Transport resumed ... we were right to wait...");
     }
 
 }

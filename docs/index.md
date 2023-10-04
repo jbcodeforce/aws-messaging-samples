@@ -3,9 +3,21 @@
 !!! info "Documentation Updates"
     Creation date: September 2023 - Updated 10/03/2023
 
-This repository includes a set of demo applications and IaC to create Amazon MQ with different engine types. 
+This repository includes a set of demo applications and IaC to create Amazon MQ with different engine types.
 
-The AWS MQ workshops contain a lot of information to get started with Amazon MQ. This repositoryy addresses some of the specific subjects not covered in detail in those workshops: JMS programming model, separation of application, different ActiveMQ release, supports running locally with docker. Unit testing, integration test, reactive messaging and reactive programming.
+## Audiances
+
+The main readers of this website are people interested in AWS and open-source messaging systems.
+
+* Solution architects
+* Lead developer for new distributed system solutions, with interest in AWS and messaging systems
+
+This site is a companion of [AWS Studies site](https://jbcodeforce.github.io/aws-studies/) and my [EDA book](https://jbcodeforce.github.io/eda-studies/).
+
+## Problem
+
+The AWS MQ workshops contain a lot of information to get started with Amazon MQ. This repositoryy addresses some of the specific subjects not covered in detail in those workshops: JMS programming model, clear separation between producer and consumer applications, different ActiveMQ release support, running locally with docker. Addressing unit testing, integration test, reactive messaging and reactive programming.
+
 For the IaC, we use AWS CDK, with different stack to be able to reuse common infrastructure like VPC, IAM roles, Cloud9 environment...
 
 ## [Active MQ](https://activemq.apache.org/)
