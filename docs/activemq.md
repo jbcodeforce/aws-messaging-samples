@@ -98,6 +98,19 @@ The [Artemis product documentation HA chapter](https://activemq.apache.org/compo
 * With replicas when live broker restarts and failbacks, it will replicate data from the backup broker with the most fresh messages.
 * Brokers with replication are part of a cluster. So broker.xml needs to include cluster connection. Live | backup brokers are in the same node-group.
 
+## Storage
+
+The ActiveMQ message storage is an embeddable transaction solution. It uses a transaction journal to support recovery. Messages are persisted in data logs (up to 32mb size) with reference to location in KahaDB. Messages are in memory and then peridically inserted in the storage.
+
+Message data logs includes messages/acks and transactional boundaries.
+Be sure to have the individual file size greater than the expected largest message size.
+
+Also broker who starts to have memory issue, will throttle the producer or even block it. See [this Producer flow control article](https://activemq.apache.org/producer-flow-control.html) for deeper explanation and configuration per queue.
+
+Messages can be archived to separate logs.
+
+See [the product documentation for configuration.](https://activemq.apache.org/amq-message-store)
+
 ## FAQs
 
 ???- question "What needs to be done to migrate to Artemis"
@@ -110,6 +123,13 @@ The [Artemis product documentation HA chapter](https://activemq.apache.org/compo
     JMS has no specification on failover for JMS provider. When broker fails, there will be a connection Exception. The way to manage this exception is to use the asynchronous `ExceptionListener` interface which will give developer maximum control over when to reconnect, assessing what type of JMS error to better act on the error. ActiveMQ offers the failover transport protocol, is for connection failure, and let the client app to reconnect to another broker as part of the URL declaration. Sending message to the broker will be blocked until the connection is restored. Use `TransportListener` interface to understand what is happening. This is a good way to add logging to the application to report on the connection state.
 
 ???- question "what are the critical metrics / log patterns that should be monitored in respect to MQ logs?"
+    CloudWatch metrics has a specific Amazon MQ dashboard with CpuUtilization, CurrentConnectionCount, networking in/ou, producer and consumer counts. We can add out own metrics from a list of broker or queue specific ones. The following may be of interest for storage: (See [this re:post](https://repost.aws/knowledge-center/mq-persistent-store-is-full-errors)):
+        
+    * Store Percentage Usage
+    * Journal Files for Full Recovery: # of journal files that are replayed after a clean shutdown.
+    * Journal Files for Fast Recovery: same but for unclean shutdown. (too many pending messages in storage)
+
+    When broker starts to have memory limit for a destination, then producer flow will be throttled, even blocked. (See [this note](https://activemq.apache.org/producer-flow-control.html))
     
 
 ???- question "When messages are moved to DLQ?"
