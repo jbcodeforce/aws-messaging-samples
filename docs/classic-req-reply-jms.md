@@ -87,7 +87,7 @@ While in development mode, under the `activeMQ/classic/request-replyto` folder:
 
 ## Code Explanation
 
-The code is under [jms-orchestrator](./activeMQ/classic/request-replyto/jms-orchestrator/) and [jms-participant](./activeMQ/classic/request-replyto/jms-participant), to implement a request-response over queue using JMS.
+The code is under [jms-orchestrator](https://github.com/jbcodeforce/aws-messaging-study/tree/main/activeMQ/classic/request-replyto/jms-orchestrator/) and [jms-participant](https://github.com/jbcodeforce/aws-messaging-study/tree/main/activeMQ/classic/request-replyto/jms-participant), to implement a request-response over queue using JMS.
 
 The Orchestrator is a classical microservice with the order entity as resource. The interesting part is the `OrderMessageProcessing` class. It is JMS implementation code, using one connection to the broker and two JMS sessions, one for the producer and one for the consumer.
 
@@ -109,7 +109,7 @@ The API is jms 2.0 based on `javax.jms` API, and the ActiveMQ is the client app:
     </dependency>
 ```
 
-The classical JMS implementation use the ConnectionFactory, create a unique connection to the broker, and then one session to send message and one to receive message from the different queue:
+The classical JMS implementation uses the ConnectionFactory, creates a unique connection to the broker, and then one session to send message and one to receive message from the different queue:
 
 ```java
 connectionFactory = new ActiveMQConnectionFactory(connectionURLs);
@@ -121,26 +121,20 @@ initConsumer();
 connection.start();    
 ```
 
-As the class is MessageListener, the JMSconsumer thread is associate to it, and the `OrderMessageProcessing` class processes the replyTo queue messages in the onMessage method.
+As the class is MessageListener, the JMSconsumer thread is associated to it, and the `OrderMessageProcessor` class processes the replyTo queue messages in the onMessage method.
 
 ```java
  public void onMessage(Message msg) {
-       TextMessage rawMsg = (TextMessage) msg;
-       OrderMessage om;
-        try {
-            om = mapper.readValue(rawMsg.getText(),OrderMessage.class);
-            logger.info("Received message: " + om.toString());
-            Order o = OrderMessage.toOrder(om);
-            service.processParticipantResponse(o);
-            msg.acknowledge();
-        }
-        catch (JsonProcessingException | JMSException e) {
-            e.printStackTrace();
-        }
-    }
+    //...
+        OrderMessage oe = OrderMessage.fromOrder(order);
+        String orderJson= mapper.writeValueAsString(oe);
+        TextMessage msg =  producerSession.createTextMessage(orderJson);
+        msg.setJMSCorrelationID(UUID.randomUUID().toString().substring(0,8));
+        producer.send( msg);
+    //...
 ```
 
-We should follow some implementation best practices: 
+We should follow some implementation best practices:
 
 * having a different data model for the message payload than the business entity persisted (Order and OrderMessage), 
 * use a service class to implement the business logic to manage the business entity.

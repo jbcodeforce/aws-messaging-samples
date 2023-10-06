@@ -155,24 +155,28 @@ public class OrderMessageParticipantProcessor implements MessageListener, Except
 
        TextMessage rawMsg = (TextMessage) msg;
        OrderMessage om;
-    try {
+        try {
+            om = mapper.readValue(rawMsg.getText(),OrderMessage.class);
+            logger.info("Received message: " + om.toString());
+            om.status = OrderMessage.ASSIGNED_STATUS;
+            String orderJson= mapper.writeValueAsString(om);
+            sendResponse(rawMsg, orderJson);
+            msg.acknowledge();
+            logger.info("Reponse sent to replyTo queue " + orderJson);
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
+        } catch ( JMSException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void sendResponse( TextMessage rawMsg, String orderJson) throws JMSException{
         if (! isLeveragingFailoverProtocol &&  ! isConnected()) {
             restablishConnection();
         }
-        om = mapper.readValue(rawMsg.getText(),OrderMessage.class);
-        logger.info("Received message: " + om.toString());
-        om.status = OrderMessage.ASSIGNED_STATUS;
-        String orderJson= mapper.writeValueAsString(om);
         TextMessage outMsg =  producerSession.createTextMessage(orderJson);
         outMsg.setJMSCorrelationID(rawMsg.getJMSCorrelationID());
         producer.send(outMsg);
-        msg.acknowledge();
-        logger.info("Reponse sent to replyTo queue " + orderJson);
-    } catch (JsonProcessingException e) {
-        e.printStackTrace();
-    } catch ( JMSException e) {
-        e.printStackTrace();
-    }
     }
 
     @Override

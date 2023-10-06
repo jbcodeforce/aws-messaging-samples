@@ -15,7 +15,7 @@ services:
       ACTIVEMQ_DATA: /tmp/mq/kahadb
       ACTIVEMQ_EXTRA_ARGS: "--relax-jolokia"
     volumes:
-      - ./config/broker-1.xml:/opt/amq/conf/activemq.xml
+      - ./config/broker-1.xml:/opt/apache-activemq/conf/activemq.xml
       - ./config/jetty.xml:/opt/apache-activemq/conf/jetty.xml
       - ./data:/tmp/mq/kahadb
     networks:
@@ -34,7 +34,7 @@ services:
       ACTIVEMQ_EXTRA_ARGS: "--relax-jolokia"
       ACTIVEMQ_DATA: /tmp/mq/kahadb
     volumes:
-      - ./config/broker-2.xml:/opt/amq/conf/activemq.xml
+      - ./config/broker-2.xml:/opt/apache-activemq/conf/activemq.xml
       - ./config/jetty.xml:/opt/apache-activemq/conf/jetty.xml
       - ./data:/tmp/mq/kahadb
     depends_on:

@@ -1,11 +1,11 @@
 # Introduction
 
 !!! info "Documentation Updates"
-    Creation date: September 2023 - Updated 10/03/2023
+    Creation date: September 2023 - Updated 10/05/2023
 
 This repository includes a set of demo applications and IaC to create Amazon MQ with different engine types.
 
-## Audiances
+## Audience
 
 The main readers of this website are people interested in AWS and open-source messaging systems.
 
@@ -16,9 +16,9 @@ This site is a companion of [AWS Studies site](https://jbcodeforce.github.io/aws
 
 ## Problem
 
-The AWS MQ workshops contain a lot of information to get started with Amazon MQ. This repositoryy addresses some of the specific subjects not covered in detail in those workshops: JMS programming model, clear separation between producer and consumer applications, different ActiveMQ release support, running locally with docker. Addressing unit testing, integration test, reactive messaging and reactive programming.
+The AWS MQ workshops contain a lot of information to get started with Amazon MQ. This repository addresses some of the specific subjects not covered in detail in those workshops: JMS programming model, clear separation between producer and consumer applications, different ActiveMQ release support, running locally with docker, failover testing. Addressing unit testing, integration test, reactive messaging and reactive programming.
 
-For the IaC, we use AWS CDK, with different stack to be able to reuse common infrastructure like VPC, IAM roles, Cloud9 environment...
+For the IaC, we use AWS CDK, with different stacks to be able to reuse common infrastructure like VPC, IAM roles, and an optional Cloud9 environment, and finally the broker configuration.
 
 ## [Active MQ](https://activemq.apache.org/)
 
@@ -32,6 +32,7 @@ Active MQ is an Open Source software, multi-protocol, java based message broker.
 * [Request-ReplyTo order ochestrator and participant based on JMS - ActiveMQ Artemis release](./req-reply-jms.md)
 * [AMQP Quarkus app point to point - ActiveMQ Artemis release](./amq-activemq.md)
 * [Infrastructure as code - VPC stack]()
+* [Infrastructure as code - ActiveMQ active/standby topoloyg stack]()
 
 ### AWS Samples
 
