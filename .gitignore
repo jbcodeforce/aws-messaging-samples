@@ -1,3 +1,4 @@
 **/target/*
 site/
 activeMQ/classic/request-replyto/data/
+**/.venv/

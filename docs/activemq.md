@@ -153,7 +153,6 @@ See [the product documentation for configuration.](https://activemq.apache.org/a
 ???- question "Broker clustering"
     Brokers in a cluster can share the message processing, each broker manages its own storage and connections. A core bridge is automatically created. When message arrives it will be send to one of the broker in a round-robin fashion. It can also distribute to brokers that have active consumers. There are different topologies supported: symmetric cluster where all nodes are connected to each other, or chain cluster where node is connected to two neighbores, . With a symmetric cluster each node knows about all the queues that exist on all the other nodes and what consumers they have.
 
-???- question "What are the metrics to assess to decide to move to server mesh topology?"
 
 ???- question "Configuring Transport"
     **Acceptor** defines a way in which connections can be made to ActiveMQ broker. Here is one example: 
@@ -162,15 +161,15 @@ See [the product documentation for configuration.](https://activemq.apache.org/a
     ```
     **Connectors** define how to connect to the brokers, used when brokers are in cluster or bridged. When a client app, using ClientSessionFactory, uses indirectly connector.
 
+???- question "What are the metrics to assess to decide to move to server mesh topology?"
+    Server mesh is used to increase the number of consumers by adding brokers that may replicate messages. Broker's memory usage. Looking at the number of messages a specific consumer has acknowledged (inflight). Number of consumer per queue. Other important metrics are looking at [queue attributes](https://activemq.apache.org/components/artemis/documentation/1.0.0/queue-attributes.html) like size, DLQ content.
 
-???- question "What the log pattern to monitoring in CloudWatch?"
 
 ???- question "How to be quickly aware of broker is rebooting?"
+    Create a CloudWatch alert on the rebooting event.
 
 
 ## To address
 
-broker failure - chaos testing
-replicas
 amqp client 
 reactive messaging
