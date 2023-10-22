@@ -2,10 +2,14 @@ from aws_cdk import (
     # Duration,
     Stack,
     aws_ec2 as ec2,
+    CfnOutput
 )
+import boto3
 from constructs import Construct
 
-cidr="10.10.0.0/16"
+vpc_name="DemoVpc"
+cidr_mask=24
+CIDR="10.0.0.0/16"
 
 class VpcStack(Stack):
 
@@ -19,8 +23,8 @@ class VpcStack(Stack):
         else:
             print("found vpc")
             self.vpc=ec2.Vpc.from_lookup(self, "lookup", vpc_name=vpc_name, is_default=False)
-        print(self.vpc.vcp_id)
-        CfnOutput(self,"VPC", value=self.vpc.vpc_id, export_name="vpc")
+        print(self.vpc.vpc_id)
+        CfnOutput(self,"VPC", value=self.vpc.vpc_id, export_name=vpc_name)
 
     
     def lookup_vpc(self, vpc_name: str) -> ec2.Vpc:
@@ -66,20 +70,4 @@ class VpcStack(Stack):
 
     def getCIDR(self) -> str:
         return CIDR
-        self.vpc = ec2.Vpc(self, "VPC",
-                           max_azs=2,
-                           cidr=cidr,
-                           nat_gateways=2,
-                           enable_dns_hostnames=True,
-                           enable_dns_support=True,
-                           subnet_configuration=[
-                               ec2.SubnetConfiguration(
-                                   name="public",
-                                   subnet_type=ec2.SubnetType.PUBLIC,
-                                   cidr_mask=24),
-                               ec2.SubnetConfiguration(
-                                   subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS,
-                                   name="private",
-                                   cidr_mask=24) # could be /16 to have more instances, but this is a demo scope.
-                           ]
-                        )
+        

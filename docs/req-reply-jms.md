@@ -50,7 +50,6 @@ While in development mode, under the `activeMQ/request-replyto` folder:
 
 
 
-
 ## Code Explanation
 
 The code is under [jms-orchestrator](./activeMQ/request-replyto/jms-orchestrator/) and [jms-participant](./activeMQ/request-replyto/jms-participant), to implement a request-response over queue using JMS.
@@ -91,7 +90,6 @@ Two implementation practices: having a different data model for the message than
 On the consumer side, the class is also a MessageListener, but also a producer to the different queue.
 Each consumer performs acknowledgement by code. Acknowledging a consumed message automatically acknowledges the receipt of all messages that have been consumed by the current session.
 
-
 ## Deploy on AWS
 
 1. First build the docker images for each service using `buildAll.sh` command: Change the name of the image to adapt to your ECR repository.
@@ -105,11 +103,6 @@ Each consumer performs acknowledgement by code. Acknowledging a consumed message
     docker push toECR_repository
     ```
 
-1. If not already done, use CDK to deploy VPC, Brokers
-1. Optional create a Cloud9 environment in the public subnet
+1. If not already done, use CDK to deploy VPC, Brokers using [the instructions here](./activemq-cdk.md/#common-stack).
+1. Deploy Active MQ in [active/standby architecture](./activemq-cdk.md/#active-mq-activestandby)
 1. Use CDK to deploy the two apps on ECS Fargate.
-
-    ```sh
-    cd infra
-    cdk deploy
-    ```

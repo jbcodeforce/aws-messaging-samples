@@ -15,11 +15,11 @@ class Cloud9Stack(Stack):
         print(self.account)
         c9env = cloud9.Ec2Environment(self, "Cloud9Environment",
                                     vpc=vpc, 
-                                    description="Jerome's cloud9 env.",
+                                    description="My Cloud9 env.",
                                     subnet_selection=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PUBLIC),
                                     instance_type=ec2.InstanceType("t3.medium"),
                                     automatic_stop=Duration.hours(1),
-                                    ec2_environment_name="Cloud9AcrDemo",
+                                    ec2_environment_name="Cloud9ForDemo",
                                     owner=cloud9.Owner.account_root(self.account),
                                     image_id=cloud9.ImageId.AMAZON_LINUX_2)
         CfnOutput(self, "URL", value=c9env.ide_url)

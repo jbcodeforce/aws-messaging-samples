@@ -16,7 +16,7 @@ This site is a companion of [AWS Studies site](https://jbcodeforce.github.io/aws
 
 ## Problem
 
-The AWS MQ workshops contain a lot of information to get started with Amazon MQ. This repository addresses some of the specific subjects not covered in detail in those workshops: JMS programming model, clear separation between producer and consumer applications, different ActiveMQ release support, running locally with docker, failover testing. Addressing unit testing, integration test, reactive messaging and reactive programming.
+The Amazon MQ workshops contain a lot of very good information to get started with Amazon MQ. This repository addresses some of the specific subjects not covered in detail in those workshops: JMS programming model, clear separation between producer and consumer applications, different ActiveMQ release support, running locally with docker, failover testing. Addressing unit testing, integration test, reactive messaging and reactive programming with queueing systems.
 
 For the IaC, we use AWS CDK, with different stacks to be able to reuse common infrastructure like VPC, IAM roles, and an optional Cloud9 environment, and finally the broker configuration.
 
@@ -31,10 +31,12 @@ Active MQ is an Open Source software, multi-protocol, java based message broker.
 * [Point to Point JMS based producer and consumer - ActiveMQ Artemis release](./pt-to-pt-jms.md)
 * [Request-ReplyTo order ochestrator and participant based on JMS - ActiveMQ Artemis release](./req-reply-jms.md)
 * [AMQP Quarkus app point to point - ActiveMQ Artemis release](./amq-activemq.md)
-* [Infrastructure as code - VPC stack]()
-* [Infrastructure as code - ActiveMQ active/standby topoloyg stack]()
+* [Infrastructure as Code - VPC stack](./activemq-cdk.md/#common-stack)
+* [Infrastructure as Code - ActiveMQ active/standby topology stack](./activemq-cdk.md/#active_passive)
 
 ### AWS Samples
+
+AWS Sample git account includes samples for Amazon MQ, which can be used for inspiration:
 
 * [Github amazon-mq-workshop](https://github.com/aws-samples/amazon-mq-workshop/tree/master)
 * [Github Amazon MQ Network of Brokers samples](https://github.com/aws-samples/aws-mq-network-of-brokers)

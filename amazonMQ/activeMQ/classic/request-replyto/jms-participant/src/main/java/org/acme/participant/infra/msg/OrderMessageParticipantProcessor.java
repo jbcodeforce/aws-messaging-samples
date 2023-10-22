@@ -49,13 +49,13 @@ public class OrderMessageParticipantProcessor implements MessageListener, Except
     @ConfigProperty(name="reconnect.delay.ins")
     public int reconnectDelay;
     @Inject
-    @ConfigProperty(name="quarkus.artemis.url")
+    @ConfigProperty(name="quarkus.activemq.url")
     public String connectionURLs;
     @Inject
-    @ConfigProperty(name="quarkus.artemis.username")
+    @ConfigProperty(name="quarkus.activemq.username")
     private String user;
     @Inject
-    @ConfigProperty(name="quarkus.artemis.password")
+    @ConfigProperty(name="quarkus.activemq.password")
     private String password;
     private boolean isLeveragingFailoverProtocol = false;
 
