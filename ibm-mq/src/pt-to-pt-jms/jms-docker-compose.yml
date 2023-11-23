@@ -1,0 +1,60 @@
+version: '2'
+
+services:
+  ibmmq:
+    image: ibm-mqadvanced-server-dev
+    hostname: ibmmq
+    ports:
+        - '1414:1414'
+        - '9443:9443'
+        - '9157:9157'
+    volumes:
+        - qm1data:/mnt/mqm
+    stdin_open: true
+    tty: true
+    restart: always
+    environment:
+        LICENSE: accept
+        MQ_QMGR_NAME: QM1
+        MQ_ADMIN_PASSWORD: passw0rd
+        MQ_APP_PASSWORD: passw0rd
+        MQ_ENABLE_METRICS: true
+        MQ_DEV: false
+    networks:
+      - jms-network
+
+  producer:
+    image: jbcodeforce/jms-producer
+    container_name: producer
+    hostname: producer
+    environment:
+      QUARKUS_ARTEMIS_URL: tcp://artemis:61616
+      QUARKUS_ARTEMIS_USERNAME: admin
+      QUARKUS_ARTEMIS_PASSWORD: adminpassw0rd
+    ports:
+      - "8081:8080"
+    depends_on:
+      - ibmmq
+    networks:
+      - jms-network
+
+  consumer:
+    image: jbcodeforce/jms-consumer
+    hostname: consumer
+    container_name: consumer
+    environment:
+      QUARKUS_ARTEMIS_URL: tcp://artemis:61616
+      QUARKUS_ARTEMIS_USERNAME: admin
+      QUARKUS_ARTEMIS_PASSWORD: adminpassw0rd
+    ports:
+      - "8080:8080"
+    depends_on:
+      - ibmmq
+    networks:
+      - jms-network
+
+networks:
+  jms-network:
+    name: jms
+volumes:
+  qm1data:
