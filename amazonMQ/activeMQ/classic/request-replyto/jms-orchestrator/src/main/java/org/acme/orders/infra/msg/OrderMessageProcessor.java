@@ -55,15 +55,15 @@ public class OrderMessageProcessor implements Runnable, MessageListener, Excepti
     public int reconnectDelay;
 
     @Inject
-    @ConfigProperty(name="quarkus.activemq.url")
+    @ConfigProperty(name="activemq.url")
     public String connectionURLs;
     
     @Inject
-    @ConfigProperty(name="quarkus.activemq.username")
+    @ConfigProperty(name="activemq.username")
     private String user;
 
     @Inject
-    @ConfigProperty(name="quarkus.activemq.password")
+    @ConfigProperty(name="activemq.password")
     private String password;
 
 

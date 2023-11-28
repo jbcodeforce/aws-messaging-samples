@@ -1,12 +1,12 @@
 # Local failover demo
 
-The demonstration is based on a shared store deployment as illustrated in the figure below:
+This Failover demonstration is based on a shared store deployment as illustrated in the figure below:
 
 ![](./diagrams/failover-req-replyto.drawio.png)
 
 The local deployment uses the active and standby brokers, and the orchestrator and participant applications communicating with request queue and response queue. 
 
-The Failover stops the active broker and illustrates the reconnection to standby broker and continuing to produce and consume messages from thw two queues, without loosing messages.
+The Failover stops the active broker and illustrates the reconnection to standby broker and continuing to produce and consume messages from the two queues, without loosing messages.
 
 ## ActiveMQ Classic
 
@@ -21,7 +21,7 @@ To demonstrate connection failure and automatic reconnect via ActiveMQ failover 
     ```sh
     # build OCI image for participant and orchestrator apps
     request-replyto $ ./buildAdd.sh
-    request-replyto $ cd ../failover
+    
     ```
 
 !!! info "One script does all"
@@ -60,15 +60,15 @@ To demonstrate connection failure and automatic reconnect via ActiveMQ failover 
     [or.ap.ac.tr.fa.FailoverTransport] (ActiveMQ Task-1) Successfully connected to tcp://active:61616
     ```
 
-1. Verify the queues at [http://localhost:8161/admin/queues.jsp](http://localhost:8161/admin/queues.jsp), we should have two queues and 1 consumer on each queue.
+1. Verify the queues in the Active broket at [http://localhost:8161/admin/queues.jsp](http://localhost:8161/admin/queues.jsp), we should have two queues and 1 consumer on each queue.
 
-1. Start long simulation: it start 100 messages with a small pause of 1 second between message:
+1. Start long simulation: it starts 100 messages with a small pause of 1 second between message:
     
     ```sh
     ./e2e/startNorders 100
     ```
 
-1. Stop the active broker
+1. Stop the active broker:
 
     ```sh
     docker stop active
@@ -107,6 +107,7 @@ To demonstrate connection failure and automatic reconnect via ActiveMQ failover 
     ```
 
 !!! info "Clean up script"
+    The following script stop everything:
     ```sh
     cleanTheTest.sh
     ```
@@ -117,7 +118,7 @@ To demonstrate connection failure and automatic reconnect via ActiveMQ failover 
 
     ```yaml
     environment:
-      QUARKUS_ARTEMIS_URL: failover:(tcp://active:61616,tcp://standby:61626)?randomize=false
+      ACTIVEMQ_URL: failover:(tcp://active:61616,tcp://standby:61626)?randomize=false
     ```
 
 * Each broker configuration is mounted on the good path inside the broker container, as well as the shared filesystem (data to /tmp/mq/kahadb):
@@ -129,7 +130,7 @@ To demonstrate connection failure and automatic reconnect via ActiveMQ failover 
       - ./data:/tmp/mq/kahadb
     ```
 
-* In the broker config which is mapped to activemq.xml we find the persistence declaration on the shared filesystem, the network connector between the brokers, and transport connections to accept external apps:
+* In the broker config which is mapped to the `activemq.xml` configuration, we find the persistence declaration on the shared filesystem, the network connector between the brokers, and transport connections to accept external apps:
 
     ```xml
          <persistenceAdapter>
@@ -143,7 +144,7 @@ To demonstrate connection failure and automatic reconnect via ActiveMQ failover 
     
     ```
 
-    The 0.0.0.0 is important, to make the connection, as we run inside container with a docker define network.
+    The 0.0.0.0 is important, to make the connection, as we run inside container with a docker defined network.
 
 ## ActiveMQ Artemis
 

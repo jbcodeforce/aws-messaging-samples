@@ -1,5 +1,6 @@
 package org.acme.jms;
 
+import java.io.File;
 import java.util.Optional;
 import java.util.Random;
 import java.util.UUID;
@@ -14,7 +15,6 @@ import javax.jms.JMSContext;
 import javax.jms.JMSException;
 import javax.jms.JMSProducer;
 import javax.jms.MessageProducer;
-import javax.jms.Queue;
 import javax.jms.Session;
 import javax.jms.TextMessage;
 
@@ -60,7 +60,7 @@ public class ProductQuoteProducer implements Runnable, ExceptionListener {
     public String mqChannel;
 
     @Inject
-    @ConfigProperty(name = "mq.app_user", defaultValue = "app")
+    @ConfigProperty(name = "mq.app_user", defaultValue = "admin")
     public String mqAppUser;
 
     @Inject
@@ -87,13 +87,17 @@ public class ProductQuoteProducer implements Runnable, ExceptionListener {
     private Connection connection = null;
     private MessageProducer producer = null;
     private Session producerSession;
-    private Queue outQueue;
-
+    private Destination outQueue;
+    private JMSContext jmsContext = null;
     private final Random random = new Random();
-    private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+    private final ScheduledExecutorService simulatorScheduler = Executors.newSingleThreadScheduledExecutor();
     private ScheduledExecutorService reconnectScheduler = null;
 
 
+    /**
+     * Listen to application started event to establich connection to MQ broker
+     * @param ev
+     */
     void onStart(@Observes StartupEvent ev) {
         try {
             restablishConnection();
@@ -107,6 +111,8 @@ public class ProductQuoteProducer implements Runnable, ExceptionListener {
     void onStop(@Observes ShutdownEvent ev) {
         if (simulatorScheduler != null) 
             simulatorScheduler.shutdownNow();
+        if (reconnectScheduler != null)
+            reconnectScheduler.shutdownNow();
         disconnect();
     }
 
@@ -122,12 +128,37 @@ public class ProductQuoteProducer implements Runnable, ExceptionListener {
         if (connection == null) {
             JmsFactoryFactory ff = JmsFactoryFactory.getInstance(WMQConstants.WMQ_PROVIDER);
             connectionFactory = ff.createConnectionFactory();
+            connectionFactory.setIntProperty(WMQConstants.WMQ_CONNECTION_MODE, WMQConstants.WMQ_CM_CLIENT);
+            connectionFactory.setStringProperty(WMQConstants.WMQ_QUEUE_MANAGER, this.mqQmgr);
+            connectionFactory.setStringProperty(WMQConstants.WMQ_APPLICATIONNAME, this.appName);
+
+            connectionFactory.setBooleanProperty(WMQConstants.USER_AUTHENTICATION_MQCSP, true);
+            connectionFactory.setStringProperty(WMQConstants.USERID, this.mqAppUser);
+            connectionFactory.setStringProperty(WMQConstants.PASSWORD, this.mqPassword);
+           
             connection = connectionFactory.createConnection(mqAppUser, mqPassword);
             connection.setClientID("p-" + System.currentTimeMillis());
             connection.setExceptionListener(this);
+            String ccdtFilePath = validateCcdtFile();
+            if (ccdtFilePath == null) {
+                logger.info("No valid CCDT file detected. Using host, port, and channel properties instead.");
+                connectionFactory.setStringProperty(WMQConstants.WMQ_HOST_NAME, this.mqHostname);
+                connectionFactory.setIntProperty(WMQConstants.WMQ_PORT, this.mqHostport);
+                connectionFactory.setStringProperty(WMQConstants.WMQ_CHANNEL, this.mqChannel);
+            } else {
+                logger.info("Setting CCDTURL to 'file://" + ccdtFilePath + "'");
+                connectionFactory.setStringProperty(WMQConstants.WMQ_CCDTURL, "file://" + ccdtFilePath);
+            }
+            if (this.mqCipherSuite != null && !("".equalsIgnoreCase(this.mqCipherSuite.orElse("")))) {
+                connectionFactory.setStringProperty(WMQConstants.WMQ_SSL_CIPHER_SUITE, this.mqCipherSuite.orElse(""));
+            }
         }
-        if (producer == null || producerSession == null)
-            initProducer();
+        if (producer == null || producerSession == null) {
+            jmsContext = connectionFactory.createContext();
+            outQueue = jmsContext.createQueue("queue:///" + this.queueName);
+            initProducer(outQueue);
+        }
+            
 
         connection.start();
         logger.info("Connect to broker succeed");
@@ -139,11 +170,11 @@ public class ProductQuoteProducer implements Runnable, ExceptionListener {
     }
 
     void start(long delay) {
-        scheduler.scheduleWithFixedDelay(this, 0L, delay, TimeUnit.SECONDS);
+        simulatorScheduler.scheduleWithFixedDelay(this, 0L, delay, TimeUnit.SECONDS);
     }
 
     void stop() {
-        scheduler.shutdown();
+        simulatorScheduler.shutdown();
     }
 
     
@@ -152,9 +183,7 @@ public class ProductQuoteProducer implements Runnable, ExceptionListener {
     
     }
 
-    private void initProducer() throws JMSException{
-        producerSession = connection.createSession();
-        outQueue = producerSession.createQueue(queueName);
+    private void initProducer(Destination outQueue) throws JMSException{
         producer = producerSession.createProducer(outQueue);
         producer.setTimeToLive(60000); // one minute
     }
@@ -220,4 +249,26 @@ public class ProductQuoteProducer implements Runnable, ExceptionListener {
             e.printStackTrace();
         }
     }
+
+    private String validateCcdtFile() {
+    /*
+     * Modeled after
+     * github.com/ibm-messaging/mq-dev-patterns/blob/master/JMS/com/ibm/mq/samples/
+     * jms/SampleEnvSetter.java
+     */
+    String value = mqCcdtUrl.orElse("");
+    String filePath = null;
+    if (value != null && !value.isEmpty()) {
+      logger.info("Checking for existence of file " + value);
+      File tmp = new File(value);
+      if (!tmp.exists()) {
+        logger.info(value + " does not exist...");
+        filePath = null;
+      } else {
+        logger.info(value + " exists!");
+        filePath = value;
+      }
+    }
+    return filePath;
+  }
 }

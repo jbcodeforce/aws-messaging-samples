@@ -1,19 +1,26 @@
-# ActiveMQ study
+# ActiveMQ open source study
 
-This section is a quick summary from [ActiveMQ Artemis product documentation](https://activemq.apache.org/components/artemis/documentation/), ActiveMQ [classic documentation](https://activemq.apache.org/components/classic/documentation) and Amazon MQ [Active MQ engine documentation](https://docs.aws.amazon.com/amazon-mq/latest/developer-guide/working-with-activemq.html) for Active MQ 5.17.3 deployment as a managed service.
+This section is a quick summary from [ActiveMQ Artemis version product documentation](https://activemq.apache.org/components/artemis/documentation/), ActiveMQ [classic documentation](https://activemq.apache.org/components/classic/documentation) and Amazon MQ [ActiveMQ engine documentation](https://docs.aws.amazon.com/amazon-mq/latest/developer-guide/working-with-activemq.html) for Active MQ 5.17.3 deployment as a managed service.
 
-ActiveMQ has two main version of the product Active MQ 5.x (or classic) and Artemis 2.x which supports Jakarta Messsaging 3.1. 
-
+ActiveMQ has two main version of the product Active MQ 5.x (or classic) and Artemis 2.x which supports Jakarta Messsaging 3.1.
 
 ## Value propositions
 
 * Java 11+, JMS 2.0, Jakarta Messaging 3.0
+* [Protocols](https://activemq.apache.org/protocols) supported: STOMP, AMQP, [OpenWire](https://activemq.apache.org/wire-protocol), MQTT, NMS (.Net), CMS (C++),  HornetQ, core Artemis API.
 * Support Queues and Topics for pub/sub
 * Performance with message persistence.
 * Integrated with Java EE application server or embbeded in a java app, or standalone using lightweight netty server.
 * HA solution with automatic client failover
 * Flexible clustering
-* Support communication protocol: AMQP, OpenWire, MQTT, STOMP, HornetQ, core Artemis API.
+* Messages can be ordered by message group
+* Message filtering using selectors to perform content based routing
+* Unlimited message size so there is not need to plan for unexpected messages
+* Message Delay and scheduling
+* Distribute transactions to manage complex multi stage transactions such as database access
+* Virtual Topics and composite destinations
+* Complex redelivery policy
+
 
 ## Topologies
 
@@ -25,11 +32,15 @@ ActiveMQ has two main version of the product Active MQ 5.x (or classic) and Arte
 
 ![](./diagrams/mq-mesh.drawio.png)
 
-* Hub and Spoke where a central broker dispatch to other broker.
+* Amazon MQ propose a mesh network of single-instance brokers with non replicated files as they use EBS volume.
+
+![](./diagrams/mq-mesh-single.drawio.png)
+
+* Hub and Spoke where a central broker dispatches to other broker.
 
 ## Connection from client app
 
-Once deployed there are 5 differents end points to support the different protocols: 
+Once deployed there are 5 differents end points to support the different protocols:
 
 * OpenWire – ssl://xxxxxxx.xxx.com:61617
 * AMQP – amqp+ssl:// xxxxxxx.xxx.com:5671
@@ -96,28 +107,31 @@ The [Artemis product documentation HA chapter](https://activemq.apache.org/compo
     ![](./diagrams/amq-replica.drawio.png)
 
 * With replicas when live broker restarts and failbacks, it will replicate data from the backup broker with the most fresh messages.
-* Brokers with replication are part of a cluster. So broker.xml needs to include cluster connection. Live | backup brokers are in the same node-group.
+* Brokers with replication are part of a cluster. So `broker.xml` needs to include cluster connection. Live | backup brokers are in the same node-group.
 
 ## Storage
 
-The ActiveMQ message storage is an embeddable transaction solution. It uses a transaction journal to support recovery. Messages are persisted in data logs (up to 32mb size) with reference to location in KahaDB. Messages are in memory and then peridically inserted in the storage.
+The [ActiveMQ message storage](https://activemq.apache.org/amq-message-store) is an embeddable transactional message storage solution. It uses a transaction journal to support recovery. Messages are persisted in data logs (up to 32mb size) with reference to file location saved in [KahaDB](https://activemq.apache.org/kahadb.html), in memory. Messages are in memory and then periodically inserted in the storage in the frequency of `checkpointInterval` ms. Version 5.14.0 introduces journal synch to disk strategy: `always` ensures every journal write is followed by a disk sync (JMS durability requirement). 
 
 Message data logs includes messages/acks and transactional boundaries.
 Be sure to have the individual file size greater than the expected largest message size.
 
 Also broker who starts to have memory issue, will throttle the producer or even block it. See [this Producer flow control article](https://activemq.apache.org/producer-flow-control.html) for deeper explanation and configuration per queue.
 
-Messages can be archived to separate logs.
+Messages can be archived into separate logs.
 
-See [the product documentation for configuration.](https://activemq.apache.org/amq-message-store)
+See [the product documentation for persistence configuration.](https://activemq.apache.org/amq-message-store)
+
 
 ## FAQs
+
+Most of those questions are related to the Open source version, but some to Amazon MQ deploymento of Active MQ.
 
 ???- question "What needs to be done to migrate to Artemis"
     As of today Amazon MQ, Active MQ supports on Classic deployment and API. Moving to Artemis, most of the JMS code will work. The project dependencies need to be changed, the ActiveMQ connection factory class is different in term of package names, and if you use Jakarta JMS then package needs to be changed in the JMS producer and consumer classes.
 
 ???- question "What is the advantage of replicas vs shared storage?"
-    Shared storage needs to get SAN replication to ensure DR at the storage level. If not the broker file system is a single point of failure. It adds cost to the solution but it performs better. Replicas is ActiveMQ integrate solution to ensure High availability and sharing data between brokers. Slave broker copies data from Master. States of the brokers are not exchanged with replicas, only messages are. For Classic JDBC message store could be used. Database replication is then using for DR. When non durable queue or topic are networked, with failure, inflight messages may be lost.
+    Shared storage needs to get SAN replication to ensure DR at the storage level. If not the broker file system is a single point of failure. It adds cost to the solution but it performs better. Replicas is ActiveMQ integrate solution to ensure High availability and sharing data between brokers. Slave broker copies data from Master. States of the brokers are not exchanged with replicas, only messages are. For Classic, JDBC message store could be used. Database replication is then used for DR. When non durable queue or topic are networked, with failure, inflight messages may be lost.
 
 ???- question "What is the difference between URL failover and implementing an ExceptionListener?"
     JMS has no specification on failover for JMS provider. When broker fails, there will be a connection Exception. The way to manage this exception is to use the asynchronous `ExceptionListener` interface which will give developer maximum control over when to reconnect, assessing what type of JMS error to better act on the error. ActiveMQ offers the failover transport protocol, is for connection failure, and let the client app to reconnect to another broker as part of the URL declaration. Sending message to the broker will be blocked until the connection is restored. Use `TransportListener` interface to understand what is happening. This is a good way to add logging to the application to report on the connection state.
@@ -166,10 +180,12 @@ See [the product documentation for configuration.](https://activemq.apache.org/a
 
 
 ???- question "How to be quickly aware of broker is rebooting?"
-    Create a CloudWatch alert on the rebooting event.
+    Create a CloudWatch alert on the EC2 rebooting event.
 
 
 ## To address
 
-amqp client 
-reactive messaging
+* amqp client 
+* reactive messaging with brocker as channel
+* stomp client
+* openwire client

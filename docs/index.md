@@ -30,7 +30,7 @@ Active MQ is an Open Source software, multi-protocol, java based message broker.
 * [Request-ReplyTo order ochestrator and participant based on JMS - ActiveMQ Classic release](./classic-req-reply-jms.md)
 * [Point to Point JMS based producer and consumer - ActiveMQ Artemis release](./pt-to-pt-jms.md)
 * [Request-ReplyTo order ochestrator and participant based on JMS - ActiveMQ Artemis release](./req-reply-jms.md)
-* [AMQP Quarkus app point to point - ActiveMQ Artemis release](./amq-activemq.md)
+* [AMQP Quarkus app point to point - ActiveMQ Artemis release](./amqp-activemq.md)
 * [Infrastructure as Code - VPC stack](./activemq-cdk.md/#common-stack)
 * [Infrastructure as Code - ActiveMQ active/standby topology stack](./activemq-cdk.md/#active_passive)
 

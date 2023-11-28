@@ -1,13 +1,16 @@
-# IBM MQ
+# IBM MQ Labs
 
-## Create a docker for Mac silicon
+This note regroups explanations of the different code samples to run on top of IBM MQ.
 
-The information is in [this repository](https://github.com/ibm-messaging/mq-container.git), but it is simple, once cloned do: `make build-devserver`. The created docker image on 11/22/2023 is `ibm-mqadvanced-server-dev:9.3.4.0-arm64`.
+## Create a IBM MQ docker image for Mac silicon
 
-The docker compose file in [docker-compose for ibm mq]() can start one instance of IBMMQ for development purpose.
+With MAC M silicon, we need a different docker image, the information to build such image is in [this repository](https://github.com/ibm-messaging/mq-container.git), but it is simple, once the repository cloned do: `make build-devserver`. The created docker image on 11/22/2023 is `ibm-mqadvanced-server-dev:9.3.4.0-arm64`.
+
+The docker compose file in [docker-compose for ibm mq](https://github.com/jbcodeforce/aws-messaging-study/blob/main/ibm-mq/src/docker-compose.yaml) can start one instance of IBM MQ broker to be used for development purpose.
 
 ## Point to point code based on JMS
 
+1. Start docker compose with on IBM MQ broker under src
 
 ## Install docker on EC2
 
@@ -25,7 +28,7 @@ docker-compose version
 
 ### IBM MQ with docker
 
-The docker image to use on Linux AMI 2023 is: `icr.io/ibm-messaging/mq:latest`
+The docker image to use on Linux AMI 2023 is: `icr.io/ibm-messaging/mq:latest`. 
 
 Docker compose file to use:
 

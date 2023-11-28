@@ -52,7 +52,7 @@ While in development mode, under the `activeMQ/request-replyto` folder:
 
 ## Code Explanation
 
-The code is under [jms-orchestrator](./activeMQ/request-replyto/jms-orchestrator/) and [jms-participant](./activeMQ/request-replyto/jms-participant), to implement a request-response over queue using JMS.
+The code is under [jms-orchestrator](https://github.com/jbcodeforce/aws-messaging-study/tree/main/amazonMQ/activeMQ/classic/request-replyto/jms-orchestrator) and [jms-participant](https://github.com/jbcodeforce/aws-messaging-study/tree/main/amazonMQ/activeMQ/classic/request-replyto/jms-participant), to implement a request-response over queue using JMS.
 
 The Orchestrator is a classical microservice with the order entity as resource. The interesting part is the `OrderMessageProcessing` class. It is JMS implementation code, using one connection to the broker and two JMS sessions, one for the producer and one for the consumer.
 

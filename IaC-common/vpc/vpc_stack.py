@@ -46,9 +46,9 @@ class VpcStack(Stack):
     
     def create_vpc(self, vpc_name: str) -> ec2.Vpc:
         vpc = ec2.Vpc(self, vpc_name,
-            max_azs=3,
+            max_azs=2,
             vpc_name=vpc_name,
-            nat_gateways=3,
+            nat_gateways=0,
             ip_addresses=ec2.IpAddresses.cidr(CIDR),
             subnet_configuration=[
                 ec2.SubnetConfiguration(
