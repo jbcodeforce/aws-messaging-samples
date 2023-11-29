@@ -31,6 +31,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
 import jakarta.inject.Inject;
 
+
 /**
  * A bean producing random prices every n seconds and sending them to the prices JMS queue.
  */
@@ -126,19 +127,9 @@ public class ProductQuoteProducer implements Runnable, ExceptionListener {
 
     private synchronized void restablishConnection() throws javax.jms.JMSException {
         if (connection == null) {
+            displayParameters();
             JmsFactoryFactory ff = JmsFactoryFactory.getInstance(WMQConstants.WMQ_PROVIDER);
             connectionFactory = ff.createConnectionFactory();
-            connectionFactory.setIntProperty(WMQConstants.WMQ_CONNECTION_MODE, WMQConstants.WMQ_CM_CLIENT);
-            connectionFactory.setStringProperty(WMQConstants.WMQ_QUEUE_MANAGER, this.mqQmgr);
-            connectionFactory.setStringProperty(WMQConstants.WMQ_APPLICATIONNAME, this.appName);
-
-            connectionFactory.setBooleanProperty(WMQConstants.USER_AUTHENTICATION_MQCSP, true);
-            connectionFactory.setStringProperty(WMQConstants.USERID, this.mqAppUser);
-            connectionFactory.setStringProperty(WMQConstants.PASSWORD, this.mqPassword);
-           
-            connection = connectionFactory.createConnection(mqAppUser, mqPassword);
-            connection.setClientID("p-" + System.currentTimeMillis());
-            connection.setExceptionListener(this);
             String ccdtFilePath = validateCcdtFile();
             if (ccdtFilePath == null) {
                 logger.info("No valid CCDT file detected. Using host, port, and channel properties instead.");
@@ -152,6 +143,17 @@ public class ProductQuoteProducer implements Runnable, ExceptionListener {
             if (this.mqCipherSuite != null && !("".equalsIgnoreCase(this.mqCipherSuite.orElse("")))) {
                 connectionFactory.setStringProperty(WMQConstants.WMQ_SSL_CIPHER_SUITE, this.mqCipherSuite.orElse(""));
             }
+            connectionFactory.setIntProperty(WMQConstants.WMQ_CONNECTION_MODE, WMQConstants.WMQ_CM_CLIENT);
+            connectionFactory.setStringProperty(WMQConstants.WMQ_QUEUE_MANAGER, this.mqQmgr);
+            connectionFactory.setStringProperty(WMQConstants.WMQ_APPLICATIONNAME, this.appName);
+            //connectionFactory.setBooleanProperty(WMQConstants.USER_AUTHENTICATION_MQCSP, true);
+            //connectionFactory.setStringProperty(WMQConstants.USERID, this.mqAppUser);
+            //connectionFactory.setStringProperty(WMQConstants.PASSWORD, this.mqPassword);
+           
+            connection = connectionFactory.createConnection(mqAppUser, mqPassword);
+            connection.setClientID("p-" + System.currentTimeMillis());
+            connection.setExceptionListener(this);
+      
         }
         if (producer == null || producerSession == null) {
             jmsContext = connectionFactory.createContext();
@@ -270,5 +272,16 @@ public class ProductQuoteProducer implements Runnable, ExceptionListener {
       }
     }
     return filePath;
+  }
+
+  private void displayParameters() {
+
+    logger.info("##########  Connection parameters #######");
+    logger.info("Hostname: " + mqHostname);
+    logger.info("Port: " + mqHostport);
+    logger.info("Channel: " + mqChannel);
+    logger.info("Qmgr: " + mqQmgr);
+    logger.info("App User: " + mqAppUser);
+    logger.debug("App Password: " + mqPassword);
   }
 }

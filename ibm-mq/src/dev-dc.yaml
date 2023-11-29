@@ -1,16 +1,14 @@
 version: '3.7'
 services:
   ibmmq:
-    # image: ibm-mqadvanced-server-dev:9.3.4.0-arm64
-    image: j9r/ibmmq
+    image: ibm-mqadvanced-server-dev:9.3.4.0-arm64
+    #image: j9r/ibmmq
     container_name: ibmmq
     hostname: ibmmq
     ports:
         - '1414:1414'
         - '9443:9443'
         - '9157:9157'
-    volumes:
-        - qm1data:/mnt/mqm
     stdin_open: true
     tty: true
     restart: always
@@ -21,5 +19,3 @@ services:
         MQ_APP_PASSWORD: passw0rd
         MQ_ENABLE_METRICS: true
         MQ_DEV: true
-volumes:
-  qm1data:

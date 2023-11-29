@@ -49,6 +49,7 @@ To Be done.
 
 ## Interesting content to read
 
+* [re:Invent 2018 - Choosing the right messaging services.](https://www.youtube.com/watch?v=4-JmX6MIDDI)
 * [AWS Active MQ Workshop](https://catalog.us-east-1.prod.workshops.aws/workshops/0b534eb9-fdfb-49f0-8df4-ebccca71a9eb/en-US)
 * [Amazon MQ RabbitMQ workshop](https://catalog.us-east-1.prod.workshops.aws/workshops/88db3818-a8bb-4f5c-acf9-e57fa7a129b6/en-US)
 * [Create broker AWS CLI command.](https://awscli.amazonaws.com/v2/documentation/api/latest/reference/mq/create-broker.html)

@@ -24,7 +24,7 @@ services:
       - jms-network
 
   producer:
-    image: jbcodeforce/jms-producer
+    image: j9r/mq-jms-producer
     container_name: producer
     hostname: producer
     environment:
