@@ -1,8 +1,9 @@
-version: '2'
-
+version: '3.7'
 services:
   ibmmq:
-    image: ibm-mqadvanced-server-dev
+    image: ibm-mqadvanced-server-dev:9.3.4.0-arm64
+    #image: j9r/ibmmq
+    container_name: ibmmq
     hostname: ibmmq
     ports:
         - '1414:1414'
@@ -19,42 +20,32 @@ services:
         MQ_ADMIN_PASSWORD: passw0rd
         MQ_APP_PASSWORD: passw0rd
         MQ_ENABLE_METRICS: true
-        MQ_DEV: false
-    networks:
-      - jms-network
-
+        MQ_DEV: true
   producer:
     image: j9r/mq-jms-producer
     container_name: producer
     hostname: producer
     environment:
-      QUARKUS_ARTEMIS_URL: tcp://artemis:61616
-      QUARKUS_ARTEMIS_USERNAME: admin
-      QUARKUS_ARTEMIS_PASSWORD: adminpassw0rd
+      MQ_HOST: ibmmq
+      MQ_PORT: 1414
+      MQ_APP_USER: app
+      MQ_APP_PASSWORD: passw0rd
     ports:
       - "8081:8080"
     depends_on:
       - ibmmq
-    networks:
-      - jms-network
-
   consumer:
-    image: jbcodeforce/jms-consumer
+    image: j9r/mq-jms-consumer
     hostname: consumer
     container_name: consumer
     environment:
-      QUARKUS_ARTEMIS_URL: tcp://artemis:61616
-      QUARKUS_ARTEMIS_USERNAME: admin
-      QUARKUS_ARTEMIS_PASSWORD: adminpassw0rd
+      MQ_HOST: ibmmq
+      MQ_PORT: 1414
+      MQ_APP_USER: app
+      MQ_APP_PASSWORD: passw0rd
     ports:
       - "8080:8080"
     depends_on:
       - ibmmq
-    networks:
-      - jms-network
-
-networks:
-  jms-network:
-    name: jms
 volumes:
   qm1data:

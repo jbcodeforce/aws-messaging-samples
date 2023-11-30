@@ -1,4 +1,4 @@
-package org.acme.jms;
+package org.acme.jms.infra.api;
 
 public class SimulControl {
     public long delay;

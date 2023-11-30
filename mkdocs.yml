@@ -4,7 +4,7 @@ site_author: Jerome Boyer
 nav:
   - Introduction: index.md
   - Active MQ: activemq.md
-  - IBM MQ: https://jbcodeforce.github.io/eda-studies/techno/ibm-mq/
+  - IBM MQ summary: https://jbcodeforce.github.io/eda-studies/techno/ibm-mq/
   - Labs:
     - AWS Console: labs/aws-console-lab.md
     - ActiveMQ with CDK: activemq-cdk.md

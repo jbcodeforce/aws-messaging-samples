@@ -64,7 +64,6 @@ public class OrderMessageParticipantProcessor implements MessageListener, Except
     private ConnectionFactory connectionFactory;
     private Connection connection = null;
     private  MessageProducer producer;
-    private MessageConsumer consumer;
     private Queue outQueue;
     private Queue inQueue; 
     private MessageConsumer messageConsumer;
@@ -82,7 +81,7 @@ public class OrderMessageParticipantProcessor implements MessageListener, Except
         } 
         if (producer == null || producerSession == null)
             initProducer();
-        if (consumer == null || consumerSession == null) 
+        if (messageConsumer == null || consumerSession == null) 
             initConsumer();
        
         connection.start();
@@ -127,12 +126,12 @@ public class OrderMessageParticipantProcessor implements MessageListener, Except
     }
 
     private synchronized void disconnect() {
-        closeUtil(consumer);
+        closeUtil(messageConsumer);
         closeUtil(consumerSession);
         closeUtil(producerSession);
         closeUtil(producer);
         closeUtil(connection);
-        consumer = null;
+        messageConsumer = null;
         producerSession = null;
         consumerSession = null;
         producer = null;

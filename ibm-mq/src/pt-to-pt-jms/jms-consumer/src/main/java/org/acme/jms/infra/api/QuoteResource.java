@@ -1,5 +1,6 @@
-package org.acme.jms;
+package org.acme.jms.infra.api;
 
+import org.acme.jms.infra.msg.ProductQuoteConsumer;
 import org.jboss.logging.Logger;
 
 import jakarta.inject.Inject;

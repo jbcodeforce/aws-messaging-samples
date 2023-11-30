@@ -1,4 +1,4 @@
-package org.acme.jms;
+package org.acme.jms.infra.msg;
 
 import java.io.File;
 import java.util.Optional;
@@ -18,9 +18,12 @@ import javax.jms.MessageProducer;
 import javax.jms.Session;
 import javax.jms.TextMessage;
 
+import org.acme.jms.model.Quote;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.jboss.logging.Logger;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ibm.msg.client.jms.JmsConnectionFactory;
 import com.ibm.msg.client.jms.JmsFactoryFactory;
 import com.ibm.msg.client.wmq.WMQConstants;
@@ -39,7 +42,7 @@ import jakarta.inject.Inject;
 public class ProductQuoteProducer implements Runnable, ExceptionListener {
     Logger logger = Logger.getLogger(ProductQuoteProducer.class.getName());
     
-    public static String[] skus = {"sku1", "sku2", "sku3", "sku4", "sku5", "sku6", "sku7", "sku8", "sku9", "sku10"};
+   
  
     @Inject
     @ConfigProperty(name="reconnect.delay.ins")
@@ -90,10 +93,10 @@ public class ProductQuoteProducer implements Runnable, ExceptionListener {
     private Session producerSession;
     private Destination outQueue;
     private JMSContext jmsContext = null;
-    private final Random random = new Random();
+
     private final ScheduledExecutorService simulatorScheduler = Executors.newSingleThreadScheduledExecutor();
     private ScheduledExecutorService reconnectScheduler = null;
-
+    private static ObjectMapper mapper = new ObjectMapper();
 
     /**
      * Listen to application started event to establich connection to MQ broker
@@ -104,7 +107,7 @@ public class ProductQuoteProducer implements Runnable, ExceptionListener {
             restablishConnection();
         } catch (JMSException e) {
           e.printStackTrace();
-
+          reconnect(reconnectDelay);
         }
         logger.info("JMS Producer Started");
     }
@@ -146,9 +149,9 @@ public class ProductQuoteProducer implements Runnable, ExceptionListener {
             connectionFactory.setIntProperty(WMQConstants.WMQ_CONNECTION_MODE, WMQConstants.WMQ_CM_CLIENT);
             connectionFactory.setStringProperty(WMQConstants.WMQ_QUEUE_MANAGER, this.mqQmgr);
             connectionFactory.setStringProperty(WMQConstants.WMQ_APPLICATIONNAME, this.appName);
-            //connectionFactory.setBooleanProperty(WMQConstants.USER_AUTHENTICATION_MQCSP, true);
-            //connectionFactory.setStringProperty(WMQConstants.USERID, this.mqAppUser);
-            //connectionFactory.setStringProperty(WMQConstants.PASSWORD, this.mqPassword);
+            connectionFactory.setBooleanProperty(WMQConstants.USER_AUTHENTICATION_MQCSP, false);
+            connectionFactory.setStringProperty(WMQConstants.USERID, this.mqAppUser);
+            connectionFactory.setStringProperty(WMQConstants.PASSWORD, this.mqPassword);
            
             connection = connectionFactory.createConnection(mqAppUser, mqPassword);
             connection.setClientID("p-" + System.currentTimeMillis());
@@ -158,10 +161,12 @@ public class ProductQuoteProducer implements Runnable, ExceptionListener {
         if (producer == null || producerSession == null) {
             jmsContext = connectionFactory.createContext();
             outQueue = jmsContext.createQueue("queue:///" + this.queueName);
-            initProducer(outQueue);
-        }
+            producerSession = connection.createSession();
+            producer = producerSession.createProducer(outQueue);
+            producer.setTimeToLive(60000); // one minute
             
-
+        }
+        
         connection.start();
         logger.info("Connect to broker succeed");
     }
@@ -171,35 +176,28 @@ public class ProductQuoteProducer implements Runnable, ExceptionListener {
             && producerSession != null;
     }
 
-    void start(long delay) {
+    public void start(long delay) {
         simulatorScheduler.scheduleWithFixedDelay(this, 0L, delay, TimeUnit.SECONDS);
     }
 
-    void stop() {
+    public void stop() {
         simulatorScheduler.shutdown();
     }
 
     
-    private Quote createRandomQuote(){
-        return new Quote(skus[random.nextInt(skus.length)], random.nextInt(100));
-    
-    }
-
-    private void initProducer(Destination outQueue) throws JMSException{
-        producer = producerSession.createProducer(outQueue);
-        producer.setTimeToLive(60000); // one minute
-    }
-    
+   
     @Override
     public void run() {
-        try (JMSContext context = connectionFactory.createContext(JMSContext.AUTO_ACKNOWLEDGE)) {
+        try {
            
-            Quote q = createRandomQuote();
-            TextMessage msg =  context.createTextMessage(q.toString());
+            Quote q = Quote.createRandomQuote();
+            String quoteJson= mapper.writeValueAsString(q);
+            TextMessage msg =  jmsContext.createTextMessage(quoteJson);
             msg.setJMSMessageID(UUID.randomUUID().toString());
-            JMSProducer producer = context.createProducer();
-            producer.send(context.createQueue(queueName),msg);
-            logger.info("Sent: " + q.toString());
+            producer.send(msg);
+            logger.info("Sent: " + quoteJson);
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
         } catch (JMSException e) {
             e.printStackTrace();
         }
@@ -207,18 +205,10 @@ public class ProductQuoteProducer implements Runnable, ExceptionListener {
 
     public void sendNmessages(int totalMessageToSend) throws InterruptedException {
         logger.info("Sending " + totalMessageToSend + " messages");
-        try (JMSContext context = connectionFactory.createContext(JMSContext.AUTO_ACKNOWLEDGE)) {
-            JMSProducer producer = context.createProducer();
-            for (int i = 0; i < totalMessageToSend; i++) {
-                Quote q = createRandomQuote();
-                TextMessage msg =  context.createTextMessage(q.toString());
-                msg.setJMSMessageID(UUID.randomUUID().toString());
-                producer.send(context.createQueue(queueName), msg);
-                logger.info("Sent: " + q.toString());
+        
+        for (int i = 0; i < totalMessageToSend; i++) {
+                run();
                 Thread.sleep(500);
-            }
-        } catch (JMSException e) {
-            e.printStackTrace();
         }
     }
 
