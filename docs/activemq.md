@@ -38,6 +38,20 @@ ActiveMQ has two main version of the product Active MQ 5.x (or classic) and Arte
 
 * Hub and Spoke where a central broker dispatches to other broker.
 
+* On-premises integration with deployment with Amazon MQ: the following diagram illustrates such integration.
+
+    ![](./diagrams/on-prem-to-activemq.drawio.png)
+
+    * The on-premises applications or ETL jobs could access the active broker, in a HA deployment (active/standby) using public internet or private connection with Amazon Direct Connect.
+    * For the public access, the internet gateway route the traffic to a network load balancer (layer 4 TCP routing), which is also HA (not represented in the figure) and then to the active Broker.
+    * The traffic back from the Active MQ queue or topic to the consumer is via a NAT gateway. NAT gateways are defined in both public subnets for HA.
+    * Security group defines firewall like policies to authorize inbound and outbound traffic.
+    * EFS is used as a shared file system for Queue persistence. 
+    * The standby broker is linked to the active broker and ready to take the lead in case of active broker failure.
+    * For higher bandwidth and secured connection, Direct Connect should be used and then the communication will be via private gateway end point.
+    * Lambda function may be used to do some of the light processing like data transformation, or enrichment and then calling directly SaaS services. When more complex flow, like stateful flows are needed, Step function can also be used (also serverless).
+
+
 ## Connection from client app
 
 Once deployed there are 5 differents end points to support the different protocols:
@@ -181,6 +195,17 @@ Most of those questions are related to the Open source version, but some to Amaz
 
 ???- question "How to be quickly aware of broker is rebooting?"
     Create a CloudWatch alert on the EC2 rebooting event.
+
+???- question "Why using Jolokia with Active MQ?"
+    Some key reasons why developers use Jolokia for ActiveMQ:
+
+    * Jolokia allows easy monitoring and management of ActiveMQ brokers and queues/topics via HTTP/JSON. This is more convenient than JMX remoting.
+    * It provides remote access to JMX beans without the need to configure JMX ports/SSL etc.
+    * Jolokia converts JMX operations to JSON over HTTP. 
+    * It allows bulk JMX operations to be performed with a single request. This improves performance compared to remote JMX.
+    * It can auto-discover brokers and provide an aggregated view of multiple ActiveMQ instances.
+    * There are Jolokia client libraries and tools available for Java, JavaScript, Go etc which simplify working with ActiveMQ via Jolokia.
+    * Jolokia is not tied to ActiveMQ specifically and can work across different JMX-enabled applications. This makes it reusable.
 
 
 ## To address
