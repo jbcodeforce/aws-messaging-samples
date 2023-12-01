@@ -1,10 +1,10 @@
 # On-way pattern with Point to Point JMS based producer and consumer
 
-The code is under the [activeMQ/classic/ow-pt-to-pt-jms](https://github.com/jbcodeforce/aws-messaging-study/tree/main/amazonMQ/activeMQ/classic/ow-pt-to-pt-jms) folder.
+This demonstration is for a one-way integration between a producer app and a consumer app using one queue defined in ActiveMQ. The code is under the [activeMQ/ow-pt-to-pt-jms](https://github.com/jbcodeforce/aws-messaging-study/tree/main/amazonMQ/activeMQ/ow-pt-to-pt-jms) folder.
 
 ## Requirements
 
-* Produce message to a queue using JMS protocol, using Quarkus constructs.
+* Produce message to a queue using JMS protocol, using Java Quarkus.
 * Consumer in a separate app, using JMS
 
 ![](./diagrams/ow-p2p-amq-jms.drawio.png)
@@ -91,23 +91,24 @@ docker compose up -d
 
 ## Deploy on AWS
 
-* Create ECR repositories for the two app:
+* Create ECR repositories for the two apps:
 
     ```sh
     aws ecr create-repository --repository-name j9r/amq-jms-consumer
     aws ecr create-repository --repository-name j9r/amq-jms-producer
     ```
 
-* Push the two docker images to ECR
+* Push the two docker images to ECR:
 
     ```sh
     export AWS_ACCOUNT_ID=
-    aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.us-west-2.amazonaws.com
-    docker tag j9r/amq-jms-consumer:latest $AWS_ACCOUNT_ID.dkr.ecr.us-west-2.amazonaws.com/j9r/amq-jms-consumer:latest
-    docker push $AWS_ACCOUNT_ID.dkr.ecr.us-west-2.amazonaws.com/j9r/amq-jms-consumer:latest
+    export REGION=us-west-2
+    aws ecr get-login-password --region $REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com
+    docker tag j9r/amq-jms-consumer:latest $AWS_ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/j9r/amq-jms-consumer:latest
+    docker push $AWS_ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/j9r/amq-jms-consumer:latest
     #
-    docker tag j9r/amq-jms-producer:latest $AWS_ACCOUNT_ID.dkr.ecr.us-west-2.amazonaws.com/j9r/amq-jms-producer:latest
-    docker push $AWS_ACCOUNT_ID.dkr.ecr.us-west-2.amazonaws.com/j9r/amq-jms-producer:latest
+    docker tag j9r/amq-jms-producer:latest $AWS_ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/j9r/amq-jms-producer:latest
+    docker push $AWS_ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/j9r/amq-jms-producer:latest
 
     ```
 
@@ -117,7 +118,11 @@ docker compose up -d
     aws ecs create-cluster --cluster-name demo-ecs
     ```
 
-* Create Active MQ broker
+* Create Active MQ broker using the command script: in [ow-pt-to-pt-jms/IaC.createBroker.sh]. 
+
+    ```sh
+    aws mq list-configurations
+    ```
 
 ### Using AWS CLI
 

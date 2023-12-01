@@ -1,0 +1,34 @@
+version: '2'
+
+services:
+  producer:
+    image: j9r/amq-jms-producer
+    container_name: producer
+    hostname: producer
+    environment:
+      ACTIVEMQ_URL: ssl://b-1b291622-5c8f-41cf-9ebc-a567f91ef607-1.mq.us-west-2.amazonaws.com:61617
+      ACTIVEMQ_USERNAME: admin
+      ACTIVEMQ_PASSWORD: alongenoughpassw0rd
+      QUEUE_NAME: carrides
+    ports:
+      - "8081:8080"
+    networks:
+      - jms-network
+
+  consumer:
+    image: j9r/amq-jms-consumer
+    hostname: consumer
+    container_name: consumer
+    environment:
+      ACTIVEMQ_URL: ssl://b-1b291622-5c8f-41cf-9ebc-a567f91ef607-1.mq.us-west-2.amazonaws.com:61617
+      ACTIVEMQ_USERNAME: admin
+      ACTIVEMQ_PASSWORD: alongenoughpassw0rd
+      QUEUE_NAME: carrides
+    ports:
+      - "8080:8080"
+    networks:
+      - jms-network
+
+networks:
+  jms-network:
+    name: jms

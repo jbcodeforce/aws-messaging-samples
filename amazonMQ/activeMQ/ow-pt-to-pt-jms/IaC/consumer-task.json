@@ -1,0 +1,30 @@
+{
+    "family": "amq-consumer",
+    "networkMode": "awsvpc",
+    "executionRoleArn": "arn:aws:iam::ACCOUNT_ID:role/execCommandRole",
+    "taskRoleArn": "arn:aws:iam::ACCOUNT_ID:role/execCommandRole", 
+    "containerDefinitions": [
+        {
+            "name": "mq-consumer",
+            "image": "ACCOUNT_ID.dkr.ecr.us-west-2.amazonaws.com/j9r/amq-jms-consumer:latest",
+            "portMappings": [
+                {
+                    "containerPort": 8080,
+                    "hostPort": 8080,
+                    "protocol": "tcp"
+                }
+            ],
+            "essential": true,
+            "environment" : [
+                {"ACTIVEMQ_URL": "ssl://b-1b291622-5c8f-41cf-9ebc-a567f91ef607-1.mq.us-west-2.amazonaws.com:61617"},
+                {"ACTIVEMQ_PASSWORD": "alongenoughpassw0rd"}
+
+            ]
+        }
+    ],
+    "requiresCompatibilities": [
+        "FARGATE"
+    ],
+    "cpu": "256",
+    "memory": "512"
+}

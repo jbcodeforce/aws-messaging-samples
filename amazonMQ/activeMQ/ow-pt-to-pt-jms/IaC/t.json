@@ -1,0 +1,28 @@
+{
+    "family": "sample-fargate",
+    "networkMode": "awsvpc",
+    "executionRoleArn": "arn:aws:iam::403993201276:role/execCommandRole",
+    "taskRoleArn": "arn:aws:iam::403993201276:role/execCommandRole", 
+    "containerDefinitions": [
+        {
+            "name": "mq-consumer",
+            "image": "403993201276.dkr.ecr.us-west-2.amazonaws.com/j9r/amq-jms-consumer:latest",
+            "portMappings": [
+                {
+                    "containerPort": 8080,
+                    "hostPort": 8080,
+                    "protocol": "tcp"
+                }
+            ],
+            "essential": true,
+            "environment" : [
+
+            ]
+        }
+    ],
+    "requiresCompatibilities": [
+        "FARGATE"
+    ],
+    "cpu": "256",
+    "memory": "512"
+}

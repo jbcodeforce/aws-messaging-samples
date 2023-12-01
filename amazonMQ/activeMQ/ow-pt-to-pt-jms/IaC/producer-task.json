@@ -1,0 +1,24 @@
+{
+    "family": "sample-fargate",
+    "networkMode": "awsvpc",
+    "taskRoleArn": "arn:aws:iam::ACCOUNT_ID:role/execCommandRole", 
+    "containerDefinitions": [
+        {
+            "name": "mq-producer",
+            "image": "ACCOUNT_ID.dkr.ecr.us-west-2.amazonaws.com/j9r/amq-jms-producer:latest",
+            "portMappings": [
+                {
+                    "containerPort": 8080,
+                    "hostPort": 80,
+                    "protocol": "tcp"
+                }
+            ],
+            "essential": true
+        }
+    ],
+    "requiresCompatibilities": [
+        "FARGATE"
+    ],
+    "cpu": "256",
+    "memory": "512"
+}
