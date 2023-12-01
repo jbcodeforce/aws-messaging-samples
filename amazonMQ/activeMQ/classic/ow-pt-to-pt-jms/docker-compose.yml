@@ -1,0 +1,57 @@
+version: '2'
+
+services:
+  activemq:
+    image:  apache/activemq-classic:latest
+    hostname: activemq
+    container_name: activemq
+    ports:
+      - "8161:8161"
+      - "61616:61616"
+      - "5672:5672"
+    environment:
+      AMQ_USER: admin
+      AMQ_PASSWORD: adminpassw0rd
+      AMQ_DATA: /tmp/mq/kahadb
+      AMQ_EXTRA_ARGS: "--relax-jolokia"
+    volumes:
+      - ./data:/tmp/mq/kahadb
+      - ./config/jetty.xml:/opt/apache-activemq/conf/jetty.xml
+    networks:
+      - jms-network
+
+  producer:
+    image: j9r/amq-jms-producer
+    container_name: producer
+    hostname: producer
+    environment:
+      ACTIVEMQ_URL: tcp://activemq:61616
+      ACTIVEMQ_USERNAME: admin
+      ACTIVEMQ_PASSWORD: adminpassw0rd
+      QUEUE_NAME: carrides
+    ports:
+      - "8081:8080"
+    depends_on:
+      - activemq
+    networks:
+      - jms-network
+
+  consumer:
+    image: j9r/amq-jms-consumer
+    hostname: consumer
+    container_name: consumer
+    environment:
+      ACTIVEMQ_URL: tcp://activemq:61616
+      ACTIVEMQ_USERNAME: admin
+      ACTIVEMQ_PASSWORD: adminpassw0rd
+      QUEUE_NAME: carrides
+    ports:
+      - "8080:8080"
+    depends_on:
+      - activemq
+    networks:
+      - jms-network
+
+networks:
+  jms-network:
+    name: jms

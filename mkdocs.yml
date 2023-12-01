@@ -4,14 +4,14 @@ site_author: Jerome Boyer
 nav:
   - Introduction: index.md
   - Active MQ: activemq.md
-  - IBM MQ summary: https://jbcodeforce.github.io/eda-studies/techno/ibm-mq/
   - Labs:
-    - AWS Console: labs/aws-console-lab.md
-    - ActiveMQ with CDK: activemq-cdk.md
-    - JMS pt-to-pt: pt-to-pt-jms.md
-    - ActiveMQ classic JMS Req-ReplyTo: classic-req-reply-jms.md
+    - Active MQ:
+      - Via AWS Console: labs/aq-aws-console-lab.md
+      - One way pt-to-pt JMS: labs/ow-pt-to-pt-jms.md
+      - ActiveMQ with CDK: labs/activemq-cdk.md
+      - Failover to standby: labs/failover-lab.md
+      - JMS Req-ReplyTo: labs/classic-req-reply-jms.md
     - Artemis JMS Req-ReplyTo: req-reply-jms.md
-    - Failover to standby: labs/failover-lab.md
     - IBM MQ labs: labs/ibm-mq.md
   - Amazon MQ notes: https://jbcodeforce.github.io/aws-studies/infra/messaging/#amazon-mq
 theme: 

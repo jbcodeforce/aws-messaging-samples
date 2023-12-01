@@ -1,0 +1,24 @@
+version: '2'
+
+services:
+  active:
+    image:  apache/activemq-classic:latest
+    hostname: active
+    container_name: active
+    ports:
+      - "8161:8161"
+      - "61616:61616"
+      - "5672:5672"
+    environment:
+      AMQ_USER: admin
+      AMQ_PASSWORD: adminpassw0rd
+      AMQ_DATA: /tmp/mq/kahadb
+      AMQ_EXTRA_ARGS: "--relax-jolokia"
+    volumes:
+      - ./data:/tmp/mq/kahadb
+      - ./config/jetty.xml:/opt/apache-activemq/conf/jetty.xml
+    networks:
+      - jms-network
+networks:
+  jms-network:
+    name: jms

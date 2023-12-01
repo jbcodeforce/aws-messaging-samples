@@ -1,10 +1,10 @@
-# JMS based request-replyTo demonstration
+# Active MQ Artemis - JMS based request-replyTo demonstration
 
-The application is the same as the classic implementation as described in [this note](./classic-req-reply-jms.md), except it uses the Artemis release with Jakarta JMS 3.0 API.
+The application is the same as the classic implementation as described in [this note](./labs/classic-req-reply-jms.md), except, it uses the Artemis release with Jakarta JMS 3.0 API. This is not supported in Amazon MQ as of now.
 
 ## Running Locally
 
-While in development mode, under the `activeMQ/request-replyto` folder:
+While in development mode, under the [artemis/request-replyto](https://github.com/jbcodeforce/aws-messaging-study/tree/main/artemis) folder:
 
 1. Start Active MQ: ` docker compose up -d`
 1. Start each application with `quarkus dev`
@@ -90,19 +90,4 @@ Two implementation practices: having a different data model for the message than
 On the consumer side, the class is also a MessageListener, but also a producer to the different queue.
 Each consumer performs acknowledgement by code. Acknowledging a consumed message automatically acknowledges the receipt of all messages that have been consumed by the current session.
 
-## Deploy on AWS
 
-1. First build the docker images for each service using `buildAll.sh` command: Change the name of the image to adapt to your ECR repository.
-
-    ```sh
-    cd jms-orchestrator
-    buildAll.sh
-    docker push toECR_repository
-    cd jms-participant
-    buildAll.sh
-    docker push toECR_repository
-    ```
-
-1. If not already done, use CDK to deploy VPC, Brokers using [the instructions here](./activemq-cdk.md/#common-stack).
-1. Deploy Active MQ in [active/standby architecture](./activemq-cdk.md/#active-mq-activestandby)
-1. Use CDK to deploy the two apps on ECS Fargate.

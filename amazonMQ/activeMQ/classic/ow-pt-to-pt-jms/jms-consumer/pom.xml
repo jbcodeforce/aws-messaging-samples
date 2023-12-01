@@ -4,7 +4,7 @@
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.acme</groupId>
-    <artifactId>jms-participant</artifactId>
+    <artifactId>jms-consumer</artifactId>
     <version>1.0.0-SNAPSHOT</version>
     <properties>
         <maven.compiler.target>11</maven.compiler.target>
@@ -13,12 +13,9 @@
         <quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>
         <quarkus.platform.group-id>io.quarkus.platform</quarkus.platform.group-id>
         <quarkus-artemis.version>3.1.1</quarkus-artemis.version>
-        <quarkus.platform.version>3.4.1</quarkus.platform.version>
+        <quarkus.platform.version>3.5.0</quarkus.platform.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-
-        <quarkus-artemis.version>3.1.0</quarkus-artemis.version>
-
         <!-- Tests are unstable -->
         <skipTests>true</skipTests>
         <skipITs>true</skipITs>
@@ -33,33 +30,29 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
-            <dependency>
-                <groupId>io.quarkiverse.artemis</groupId>
-                <artifactId>quarkus-artemis-bom</artifactId>
-                <version>${quarkus-artemis.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
         </dependencies>
     </dependencyManagement>
 
     <dependencies>
-        <!-- https://mvnrepository.com/artifact/javax.jms/javax.jms-api -->
-        <dependency>
-            <groupId>javax.jms</groupId>
-            <artifactId>javax.jms-api</artifactId>
-            <version>2.0.1</version>
-        </dependency>
-
         <!-- https://mvnrepository.com/artifact/org.apache.activemq/activemq-client -->
         <dependency>
             <groupId>org.apache.activemq</groupId>
             <artifactId>activemq-client</artifactId>
             <version>5.18.3</version>
         </dependency>
+        <!-- https://mvnrepository.com/artifact/javax.jms/javax.jms-api -->
+        <dependency>
+            <groupId>javax.jms</groupId>
+            <artifactId>javax.jms-api</artifactId>
+            <version>2.0.1</version>
+        </dependency>
         <dependency>
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-resteasy-reactive</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-smallrye-openapi</artifactId>
         </dependency>
         <dependency>
             <groupId>io.quarkus</groupId>
@@ -78,11 +71,6 @@
         <dependency>
             <groupId>org.awaitility</groupId>
             <artifactId>awaitility</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.activemq</groupId>
-            <artifactId>artemis-server</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>

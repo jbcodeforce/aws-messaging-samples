@@ -2,7 +2,6 @@ package org.acme.jms.infra.msg;
 
 import java.io.File;
 import java.util.Optional;
-import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -13,7 +12,6 @@ import javax.jms.Destination;
 import javax.jms.ExceptionListener;
 import javax.jms.JMSContext;
 import javax.jms.JMSException;
-import javax.jms.JMSProducer;
 import javax.jms.MessageProducer;
 import javax.jms.Session;
 import javax.jms.TextMessage;

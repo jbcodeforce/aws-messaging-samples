@@ -1,38 +1,43 @@
-# Introduction
+# Amazon messaging studies
 
-!!! info "Documentation Updates"
-    Creation date: September 2023 - Updated 10/05/2023
+???- info "Documentation Updates"
+    Creation date: September 2023 - Updated 11/30/2023
 
-This repository includes a set of demo applications and IaC to create Amazon MQ with different engine types.
+    Add IBM MQ one-way point to point JMS implementation.
+
+This repository includes a set of demo applications and IaC to play with Amazon MQ, Amazon SQS, SNS. The goal is to complement the existing Amazon workshops by addressing some specifics customers' requests that need more than one hour to respond. This content can be shared and as an open source can be enhanced to support new specific requests. The approach is to give developers or lead architects deeper content to study and reuse.
 
 ## Audience
 
-The main readers of this website are people interested in AWS and open-source messaging systems.
+The main readers of this website are people interested in AWS messaging and open-source messaging systems.
 
 * Solution architects
 * Lead developer for new distributed system solutions, with interest in AWS and messaging systems
 
-This site is a companion of [AWS Studies site](https://jbcodeforce.github.io/aws-studies/) and my [EDA book](https://jbcodeforce.github.io/eda-studies/).
+This site is a companion of [AWS Studies site](https://jbcodeforce.github.io/aws-studies/) where are keep summary of AWS products from my personal studies and my [EDA book](https://jbcodeforce.github.io/eda-studies/).
 
-## Problem
+## Amazon MQ
 
-The Amazon MQ workshops contain a lot of very good information to get started with Amazon MQ. This repository addresses some of the specific subjects not covered in detail in those workshops: JMS programming model, clear separation between producer and consumer applications, different ActiveMQ release support, running locally with docker, failover testing. Addressing unit testing, integration test, reactive messaging and reactive programming with queueing systems.
+The Amazon MQ workshops contain a lot of very good information to get started with Amazon MQ. This repository addresses some of the specific subjects not covered in detail in those workshops: JMS programming model, clear separation between producer and consumer applications, different ActiveMQ release support, starting developing locally using docker, failover testing. Addressing unit testing, integration test, reactive messaging and reactive programming with queueing systems.
+
+The code will address the standard enterprise integration patterns of one-way point-to-point and request/responce point-to-point. But it may add more in the future.
 
 For the IaC, we use AWS CDK, with different stacks to be able to reuse common infrastructure like VPC, IAM roles, and an optional Cloud9 environment, and finally the broker configuration.
 
-## [Active MQ](https://activemq.apache.org/)
+### [Active MQ](https://activemq.apache.org/)
 
-Active MQ is an Open Source software, multi-protocol, java based message broker. The Artemis version is supporting JMS 2.0. It supports message load balancing, HA. Multiple connected "master" brokers can dynamically respond to consumer demand by moving messages between the nodes in the background.
-
+Active MQ is an Open Source software, multi-protocol, java based message broker. The Artemis version is supporting JMS 2.0.  It supports message load balancing, HA. Multiple connected "master" brokers can dynamically respond to consumer demand by moving messages between the nodes in the background.
+Amazon MQ / Active MQ engine supports the Classic version.
 
 ### Solutions in this repository
 
-* [Request-ReplyTo order ochestrator and participant based on JMS - ActiveMQ Classic release](./classic-req-reply-jms.md)
-* [Point to Point JMS based producer and consumer - ActiveMQ Artemis release](./pt-to-pt-jms.md)
-* [Request-ReplyTo order ochestrator and participant based on JMS - ActiveMQ Artemis release](./req-reply-jms.md)
+* [Request-ReplyTo order ochestrator and participant based on JMS - ActiveMQ Classic release](./labs/classic-req-reply-jms.md)
+* [One Way Point-to-Point JMS based producer and consumer - ActiveMQ](./labs/ow-pt-to-pt-jms.md)
+* [Request-Response for an order ochestrator and an order process participant based on JMS - ActiveMQ Artemis release](./req-reply-jms.md)
 * [AMQP Quarkus app point to point - ActiveMQ Artemis release](./amqp-activemq.md)
-* [Infrastructure as Code - VPC stack](./activemq-cdk.md/#common-stack)
-* [Infrastructure as Code - ActiveMQ active/standby topology stack](./activemq-cdk.md/#active_passive)
+* [Infrastructure as Code - VPC stack](./labs/activemq-cdk.md/#common-stack)
+* [Infrastructure as Code - ActiveMQ active/standby topology stack](./labs/activemq-cdk.md/#active_passive)
+* [IBM MQ JMS one-way point to point solution](./labs/ibm-mq.md)
 
 ### AWS Samples
 
@@ -43,7 +48,7 @@ AWS Sample git account includes samples for Amazon MQ, which can be used for ins
 
 ## [Rabbit MQ](https://www.rabbitmq.com/)
 
-The other Open Source project.
+The other Open Source engine using in Amazon MQ.
 
 To Be done.
 

@@ -1,0 +1,11 @@
+aws mq create-broker  --broker-name singleDemo \
+   --no-auto-minor-version-upgrade \
+   --configuration Id=demo-jb-configuration,Revision=1 \
+   --deployment-mode SINGLE_INSTANCE\
+   --authentication-strategy SIMPLE \
+   --engine-type ACTIVEMQ \
+   --engine-version 5.17.6 \
+   --host-instance-type t3.micro \
+   --no-publicly-accessible \
+   --users ConsoleAccess=true,Groups=admin,Password=passw0rd,Username=admin,ReplicationUser=false \
+   -- logs Audit=false,General=true\

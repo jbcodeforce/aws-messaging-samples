@@ -8,22 +8,22 @@ With MAC M silicon, we need a different docker image, the information to build s
 
 The docker compose file in [docker-compose for ibm mq](https://github.com/jbcodeforce/aws-messaging-study/blob/main/ibm-mq/src/dev-dc.yaml) can start one instance of IBM MQ broker to be used for development purpose.
 
-## One-way message code based on JMS
+## One-way point-to-point code based on JMS
 
-For the first demonstration we take a simple JMS producer to send message to IBM MQ queue, `DEV.QUEUE.1`, consumed by a JMS Consumer App. It is a point-to-point channel using queue. Nothing fancy, but interesting to see the change to the configuration to work with MQ. Here is the simple diagram:
+For the first demonstration we take a simple JMS producer to send message to IBM MQ queue, `DEV.QUEUE.1`, consumed by a JMS Consumer App. It is a one-way integration pattern with a point-to-point channel using queue. Nothing fancy, but interesting to see the change to the configuration to work with MQ. Here is the simple diagram:
 
 ![](./diagrams/p2p-mq-jms.drawio.png)
 
-### Develop of the JMS producer
+### Developing the JMS producer
 
-* Under `pt-to-pt-jms`, start the IBM Broker with docker: `docker-compose -f dev-dc.yaml up -d`
-* Under `jms-producer` use `quarkus dev`
+* Under [pt-to-pt-jms](https://github.com/jbcodeforce/aws-messaging-study/tree/main/ibm-mq/src/pt-to-pt-jms) folder, start one IBM MQ Broker with docker: `docker-compose -f dev-dc.yaml up -d`
+* Under `jms-producer` folder, use `quarkus dev` to test the app.
 
 Some important notes:
 
-* The IBM MQ docker in dev mode (set by environment variable:  `MQ_DEV: true` in docker compose file), has the following predefined MQ objects: `DEV.QUEUE.1`, `DEV.QUEUE.2`, `DEV.QUEUE.3`, `DEV.DEAD.LETTER.QUEUE` and the `DEV.APP.SVRCONN` and `DEV.ADMIN.SVRCONN` channel.
+* The IBM MQ docker in dev mode (set by environment variable:  `MQ_DEV: true` in docker compose file), has the following predefined MQ objects: `DEV.QUEUE.1`, `DEV.QUEUE.2`, `DEV.QUEUE.3`, `DEV.DEAD.LETTER.QUEUE` and the `DEV.APP.SVRCONN` and `DEV.ADMIN.SVRCONN` channel. We can use this channel and one of the queue for the demonstration.
 * In the docker compose file, the fact that we configure the env variable `MQ_APP_PASSWORD` with a password means we need to do the same for the application.
-* The `application.properties` file for the quarkus app defines user and password to be used to connect.
+* The `application.properties` file for the quarkus app defines user and password to be used to connect, as well as the channel and the queue name:
 
   ```sh
   mq.host=localhost
@@ -51,7 +51,7 @@ Some important notes:
   connectionFactory.setStringProperty(WMQConstants.PASSWORD, this.mqPassword);
   ```
 
-  be sure to have this in the pom.xml
+  be sure to add IBM MQ dependency in the pom.xml
 
   ```xml
     <dependency>
@@ -60,7 +60,8 @@ Some important notes:
       <version>9.3.4.0</version>
     </dependency>
   ```
-  We will see CCDT parameter later.
+
+  We will see CCDT parameters later.
 
 * Once the app runs, it should be connected with logs showing:
 
@@ -97,16 +98,16 @@ Some important notes:
   ![](./images/mq-dev-queue-1.png)
 
 
-### Develop of the JMS consumer
+### Developing the JMS consumer
 
-This time the code is in `pt-to-pt-jms/jms-consumer`. The classical JMS MessageListener implementation with the same code to initiate connection to the server. The code is using Jackson mapper for Json to Java Object for the Quote.
+This time the code is in [pt-to-pt-jms/jms-consumer](https://github.com/jbcodeforce/aws-messaging-study/tree/main/ibm-mq/src/pt-to-pt-jms/jms-consumer). The classical JMS MessageListener implementation with the same code to initiate connection to the server. The code is using Jackson mapper for Json to Java Object for the Quote.
 
 The code supports reconnection on exception with some delay to try to reconnect.
 
-### Local IBM docker end to end demo
+### Local IBM MQ docker end-to-end demo
 
-1. Be sure to build the producer and consumer images with `./buildAll.sh` under `pt-to-pt-jms` folder.
-1. Under `pt-to-pt-jms` start docker compose with on IBM MQ broker under src: `docker-compose up`. The trace should demonstrate that IBM MQ will take a little bit more time than the two quarkus apps to start, but those apps are able to reconnect, as they retries every 5 seconds to reconnect to the brokers.
+1. Be sure to build the producer and consumer docker images with `./buildAll.sh` under `pt-to-pt-jms` folder.
+1. Under `pt-to-pt-jms` start docker compose with one IBM MQ broker: `docker-compose up`. The trace should demonstrate that IBM MQ will take a little bit more time than the two quarkus apps to start, but those apps are able to reconnect, as they retries every 5 seconds to reconnect to the brokers.
 1. Connect to the Console at [https://localhost:9443](https://localhost:9443), accept the risk on the non-CA certificate, and use admin/passw0rd to access the console.
 1. Connect to the Consumer web page to see the last quote: [http://localhost:8080](http://localhost:8080)
 1. Connect to the Producer swagger UI: [http://localhost:8081/q/swagger-ui](http://localhost:8081/q/swagger-ui) and start a simulation with 20 records. The trace should list the message produces and consumes.
@@ -126,9 +127,14 @@ consumer  | 05:21:45 INFO  [or.ac.jm.in.ms.ProductQuoteConsumer] (DispatchThread
 
 ## AWS deployment
 
-### Installing docker on EC2
+We can do a manual deployment or using CDK.
 
-Install docker, docker compose, start the service, add ec2-user to docker group.
+### Installing docker on one EC2 instance
+
+Once creating a t3.micro EC2 instance, SSH to it and then do the following steps:
+
+* Install docker, docker compose, start the service, add ec2-user to docker group.
+
 ```sh
 sudo yum install -y docker
 sudo service docker start
@@ -190,6 +196,27 @@ docker-compose up -d
 * Access the IBM Console via the EC2 public URL with port 9443, accept the risk, the user is admin user and password.
 
 ### Deployment the apps in ECS Fargate
+
+We can upload the two created docker images to ECR, then defines tasks and service.
+
+1. First build the docker images for each service using `buildAll.sh` command: Change the name of the image to adapt to your ECR repository.
+
+    ```sh
+    cd jms-orchestrator
+    buildAll.sh
+    docker push toECR_repository
+    cd jms-participant
+    buildAll.sh
+    docker push toECR_repository
+    ```
+
+1. If not already done, use CDK to deploy VPC, Brokers using [the instructions here](./activemq-cdk.md/#common-stack).
+1. Deploy Active MQ in [active/standby architecture](./activemq-cdk.md/#active-mq-activestandby)
+1. Use CDK to deploy the two apps on ECS Fargate.
+
+## Solution CDK deployment
+
+The CDK approach deploy an EC2 for IBM MQ broker, the two apps in ECS Fargate.
 
 
 ### Logging

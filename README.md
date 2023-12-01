@@ -1,4 +1,4 @@
-# [Amazon MQ Studies](https://jbcodeforce.github.io/aws-messaging-study)
+# [Amazon Messaging Studies](https://jbcodeforce.github.io/aws-messaging-study)
 
 Read the content of this git from the [book view](https://jbcodeforce.github.io/aws-messaging-study)
 
@@ -7,7 +7,8 @@ Also the repository containts code and infrastructure as code content. Most of t
 * Active MQ classic with a simple request-reply JMS based code to demonstrate a classical EDA pattern of exchanging messages between a microservice orchestrator of a business process and a participant to the process.
 * Active MQ Artemis, Quarkus app, using Microprofile reactive messaging with point to point, one queue between a producer and consumer.
 * Infrastructure as code, common part to create AWS VPC.
-
+* Some simple basic integration pattern for SQS, and SNS
+* Same with  MSK.
 
 ## Building this booklet locally
 
