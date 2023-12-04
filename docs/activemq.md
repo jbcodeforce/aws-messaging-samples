@@ -1,10 +1,12 @@
-# ActiveMQ open source study
+# Active MQ & Amazon MQ 
 
 This section is a quick summary from [ActiveMQ Artemis version product documentation](https://activemq.apache.org/components/artemis/documentation/), ActiveMQ [classic documentation](https://activemq.apache.org/components/classic/documentation) and Amazon MQ [ActiveMQ engine documentation](https://docs.aws.amazon.com/amazon-mq/latest/developer-guide/working-with-activemq.html) for Active MQ 5.17.3 deployment as a managed service.
 
+## The Open source
+
 ActiveMQ has two main version of the product Active MQ 5.x (or classic) and Artemis 2.x which supports Jakarta Messsaging 3.1.
 
-## Value propositions
+### Value propositions
 
 * Java 11+, JMS 2.0, Jakarta Messaging 3.0
 * [Protocols](https://activemq.apache.org/protocols) supported: STOMP, AMQP, [OpenWire](https://activemq.apache.org/wire-protocol), MQTT, NMS (.Net), CMS (C++),  HornetQ, core Artemis API.
@@ -24,9 +26,31 @@ ActiveMQ has two main version of the product Active MQ 5.x (or classic) and Arte
 
 ## Topologies
 
-* Active / Standby: a pair of broker, one getting all the connection and traffic, the other in standby, ready to take the traffic in case of failure on active broker.
+### Active Standby
 
-![](./diagrams/amq-efs-2az.drawio.png)
+* Active / Standby: this topology uses a pair of brokers, one getting all the connection and traffic, the other in standby, ready to take the traffic in case of failure on active broker. The persistence is supported by a Storage Area Network.
+
+    ![](./diagrams/amq-efs-2az.drawio.png)
+
+* Amazon [Elastic File System](https://docs.aws.amazon.com/efs/latest/ug/whatisefs.html) is the serverless file system, used here to persist messages from Active MQ. We can mount the EFS file systems on on-premises data center servers when connected to your Amazon VPC with AWS Direct Connect or AWS VPN.
+
+#### Hybrid cloud with AWS
+
+* During migration to the cloud, we need to support hybrid deployment where existing applications on-premises end and consume messages from queues or topics defined in Amazon MQ - Active MQ engine. The following diagram illustrates different possible integrations and the deployment of active/standby brokers in 2 availability zones.
+
+    ![](./diagrams/on-prem-to-activemq.drawio.png)
+
+    * The on-premises applications or ETL jobs access the active broker, using public internet or private connection with Amazon Direct Connect, or site-to-site VPN. 
+    * For the public access, the internet gateway route the traffic to a network load balancer (layer 4 TCP routing), which is also HA (not represented in the figure), and then to the active Broker.
+    * The public internet traffic back from the Active MQ queue or topic to the consumer is via a NAT gateway. NAT gateways are defined in both public subnets for HA.
+    * When using private gateways, the VPC route tables includes routes to the CIDR of the on-premises subnets.
+    * Security group defines firewall like policies to authorize inbound and outbound traffic.
+    * EFS is used as a shared file system for messages persistence. 
+    * The standby broker is linked to the active broker and ready to take the lead in case of active broker failure.
+    * For higher bandwidth and secured connection, Direct Connect should be used and then the communication will be via private gateway end point.
+    * Lambda function may be used to do light processing like data transformation, or data enrichment and then to call directly SaaS services. When more complex flow, like stateful flows, are needed, Amazon Step function can also be used (also serverless).
+
+### Mesh
 
 * Network of brokers with multiple active/standby brokers, like a broker Mesh. This topology is used to increase the number of client applications. There is no single point of failure as in client/server or hub and spoke topologies. A client can failover another broker improving high availability.
 
@@ -36,23 +60,34 @@ ActiveMQ has two main version of the product Active MQ 5.x (or classic) and Arte
 
 ![](./diagrams/mq-mesh-single.drawio.png)
 
-* Hub and Spoke where a central broker dispatches to other broker.
+### Hub and Spoke
 
-* On-premises integration with deployment with Amazon MQ: the following diagram illustrates such integration.
+For Hub and Spoke a central broker dispatches to other connected broker.
 
-    ![](./diagrams/on-prem-to-activemq.drawio.png)
+![](./diagrams/hub-spoke.drawio.png)
 
-    * The on-premises applications or ETL jobs could access the active broker, in a HA deployment (active/standby) using public internet or private connection with Amazon Direct Connect.
-    * For the public access, the internet gateway route the traffic to a network load balancer (layer 4 TCP routing), which is also HA (not represented in the figure) and then to the active Broker.
-    * The traffic back from the Active MQ queue or topic to the consumer is via a NAT gateway. NAT gateways are defined in both public subnets for HA.
-    * Security group defines firewall like policies to authorize inbound and outbound traffic.
-    * EFS is used as a shared file system for Queue persistence. 
-    * The standby broker is linked to the active broker and ready to take the lead in case of active broker failure.
-    * For higher bandwidth and secured connection, Direct Connect should be used and then the communication will be via private gateway end point.
-    * Lambda function may be used to do some of the light processing like data transformation, or enrichment and then calling directly SaaS services. When more complex flow, like stateful flows are needed, Step function can also be used (also serverless).
+## Active MQ as Amazon MQ Engine.
+
+Within Amazon MQ, it can be deployed in SINGLE_INSTANCE, ACTIVE_STANDBY_MULTI_AZ, or CLUSTER_MULTI_AZ.
+
+### Security considerations
+
+Amazon MQ uses IAM for creating, updating, and deleting operations, but native ActiveMQ authentication for brokers.
+
+Management operations like creating, updating and deleting brokers require IAM credentials and are not integrated with LDAP.
 
 
-## Connection from client app
+#### LDAP integration
+
+* The LDAP integration is done via ActiveMQ JAAS plugin
+* A service account, defined in LDAP, is required to initiate a connection to an LDAP server. It sets up LDAP authentication for the brokers. Client connections are authenticated through this broker-LDAP connection.
+* LDAP server needs a DNS name, and be open on port 636.
+* When creating broker, we can specify the LDAP login configuration with User Base distinguished name, search filter, role base DN, role base search filter. The user base supplied to the ActiveMQ broker must point to the node in the DIT where users are stored in the LDAP server.
+* Authorization is done on a per-destination basis (or wildcard, destination set) via the `cachedLdapAuthorizationMap` element, found in the broker’s `activemq.xml`. See [product doc](https://docs.aws.amazon.com/amazon-mq/latest/developer-guide/security-authentication-authorization.html) for xml examples.
+* In LDAP we can put topics and queue in a Destination OU like: `OU=Queue,OU=Destination,OU=corp,DC=corp,DC=anycompany,DC=com`, within those OU, either a wildcard or specific destination name can be provided (OU=ORDERS.$). Within each OU that represents a destination or a wildcard, we must create three security groups: admin, write, read, to include users or groups who have permission to perform the associated actions.
+
+
+### Connection from client app
 
 Once deployed there are 5 differents end points to support the different protocols:
 
@@ -62,7 +97,7 @@ Once deployed there are 5 differents end points to support the different protoco
 * MQTT – mqtt+ssl:// xxxxxxx.xxx.com:8883
 * WSS – wss:// xxxxxxx.xxx.com:61619
 
-Amazon MQ doesn't support Mutual Transport Layer Security (TLS) authentication currently.
+Dec 2023, Amazon MQ doesn't support Mutual Transport Layer Security (mTLS) authentication.
 
 In active/standby deployment, any one of the brokers can be active at a time. Any client connecting to a broker uses a failover string that defines each broker that the client can connect to.
 
@@ -70,12 +105,12 @@ In active/standby deployment, any one of the brokers can be active at a time. An
 failover:(ssl://b-9f..7ac-1.mq.eu-west-2.amazonaws.com:61617,ssl://b-9f...c-2.mq.eu-west-2.amazonaws.com:61617)
 ```
 
-Adding failover in broker url ensures that whenever server goes up, it will reconnect it immediately. [See product documentation on failover](https://activemq.apache.org/failover-transport-reference.html)
+Adding failover in broker url ensures that whenever server goes up, it will reconnect it immediately. [See Active MQ documentation on failover](https://activemq.apache.org/failover-transport-reference.html)
 
 ??? info "Network mapping"
-    On AWS, each of those failover URL are in fact mapped to IP@ of a ENI. Each broker node has two [ENIs connected](https://docs.aws.amazon.com/amazon-mq/latest/developer-guide/connecting-to-amazon-mq.html) to two different network. The `b-9f...-1` is mapped to 10.42.1.29 for example on subnet 1, while `b-9f...-2` is 10.42.0.92 to subnet 0.
+    On AWS, each of those failover URL are in fact mapped to IP@ of a ENI. Each broker node has two [ENIs connected](https://docs.aws.amazon.com/amazon-mq/latest/developer-guide/connecting-to-amazon-mq.html) to two different networks. The `b-9f...-1` is mapped to 10.42.1.29 for example on subnet 1, while `b-9f...-2` is 10.42.0.92 to subnet 0.
 
-When the active broker reboot, the client applications may report issue but reconnect to the backup broker:
+When the active broker reboot, the client applications may report issue but reconnect to the backup broker. Below is an example of logs:
 
 ```sh
 Transport: ssl://b-d....-2.mq.us-west-2.amazonaws.com/10.42.0.113:61617] WARN org.apache.activemq.transport.failover.FailoverTransport - Transport (ssl://b-d...-2.mq.us-west-2.amazonaws.com:61617) failed , attempting to automatically reconnect: {}
@@ -88,17 +123,15 @@ java.io.EOFException
 
 In the context of cluster mesh, each application may use different failover URL to connect to different brokers.
 
-
-
 One sender can have the following URL configuration:
 
 ```sh
 failover:(ssl://b-650....e-1.mq.us-west-2.amazonaws.com:61617,ssl://b-650...e-2.mq.us-west-2.amazonaws.com:61617)
 ```
 
-and consumer with url:
+and one consumer with the url:
 
-```
+```sh
 failover:(ssl://b-9f69...f-1.mq.us-west-2.amazonaws.com:61617,ssl://b-9f69...f-2.mq.us-west-2.amazonaws.com:61617)
 ```
 
@@ -175,7 +208,7 @@ Most of those questions are related to the Open source version, but some to Amaz
 ???- question "What is the constantPendingMessageLimitStrategy parameter?"
     When consumers are slow to process message from topic, and the broker is not persisting message, then messages in the RAM will impact consumer and producer performance. This parameter specifies how many messages to keep and let old messages being replace by new ones. See [slow consumer section]( http://activemq.apache.org/slow-consumer-handling.html) of the product documentation.
 
-???- question "How to connect to MQ from different vpc or from on-premises?"
+???- question "How to connect to Rabbit MQ from different vpc or from on-premises?"
     This [Creating static custom domain endpoints with Amazon MQ for RabbitMQ](https://aws.amazon.com/blogs/compute/creating-static-custom-domain-endpoints-with-amazon-mq-for-rabbitmq/) blog presents SSL and DNS resolution to access an NLB to facade brokers. Also the [NLB can be used cross VPCs](https://repost.aws/questions/QUlIpLMYz7Q7W86iJlZJywZw/questions/QUlIpLMYz7Q7W86iJlZJywZw/configure-network-load-balancer-across-vpcs?) that are peered. Need NLB for broker specific TCP based protocol. Security group in the broker specify inbound traffic from the NLB only. NLB target group uses the broker static VPC endpoint address. NLB can also restrict who can acccess it.
 
 ???- question "Broker clustering"
@@ -214,3 +247,8 @@ Most of those questions are related to the Open source version, but some to Amaz
 * reactive messaging with brocker as channel
 * stomp client
 * openwire client
+
+
+## Good source of informations
+
+* [My own summary of Amazon MQ](https://jbcodeforce.github.io/aws-studies/infra/messaging/#amazon-mq)
