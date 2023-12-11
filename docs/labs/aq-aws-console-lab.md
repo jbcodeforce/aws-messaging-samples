@@ -1,4 +1,4 @@
-# Amazon MQ creation via the AWS console
+# Amazon MQ - Active MQ creation via the AWS console
 
 Simple summary of the steps using AWS console, for Active MQ and Rabbit MQ.
 
@@ -29,7 +29,3 @@ To ensure that the broker is accessible within our VPC, we must enable the `enab
 When developing solution, and deploying with public access, add our host IP address to the security group on port 8162 (use https://whatismyipaddress.com/)
 
 To allow Amazon MQ to publish logs to CloudWatch Logs, we must add a permission to our Amazon user and also configure a resource-based policy for Amazon MQ before creating or restarting the broker.
-
-## Rabbit MQ
-
-TBD

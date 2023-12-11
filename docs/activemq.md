@@ -68,26 +68,48 @@ For Hub and Spoke a central broker dispatches to other connected broker.
 
 ## Active MQ as Amazon MQ Engine.
 
-Within Amazon MQ, it can be deployed in SINGLE_INSTANCE, ACTIVE_STANDBY_MULTI_AZ, or CLUSTER_MULTI_AZ.
+In the Amazon MQ, the primary AWS resources are an Amazon MQ message broker and its configuration. The broker can be deployed in SINGLE_INSTANCE, ACTIVE_STANDBY_MULTI_AZ, or CLUSTER_MULTI_AZ.
 
 ### Security considerations
 
-Amazon MQ uses IAM for creating, updating, and deleting operations, but native ActiveMQ authentication for brokers.
+Active MQ is coming with its own way to define access control to Queue, Topics and Brokers. Amazon MQ uses IAM for creating, updating, and deleting operations, but native ActiveMQ authentication for brokers. The following figure illustrates the security context:
 
-Management operations like creating, updating and deleting brokers require IAM credentials and are not integrated with LDAP.
+
+![](https://jbcodeforce.github.io/aws-studies/infra/diagrams/messaging/amq-sec-users.drawio.png)
+
+We define three users: 
+
+1. An IAM administrator who manages security within an AWS account, specifically IAM users, roles and security policies. This administrator has full access to CloudWatch logs and CloudTrail for API usage auditing.
+1. An MQ service administrator, manages the MQ brokers and configuration via the AWS Console, AWS CLI or APIs. This administrator should be able to define brokers and configurations, networking access controls, security groups, and may be anything related to consumer and producer apps. He/she should have access to CloudWatch Logs and CloudTrail logs too.
+1. Developer defining queue, topics, and get broker URL and credentials.
+
+
+Amazon MQ management operations like creating, updating and deleting brokers require IAM credentials and are not integrated with LDAP.
 
 
 #### LDAP integration
 
 * The LDAP integration is done via ActiveMQ JAAS plugin
+
+    ![](./diagrams/amq-ldap.drawio.png)
+
 * A service account, defined in LDAP, is required to initiate a connection to an LDAP server. It sets up LDAP authentication for the brokers. Client connections are authenticated through this broker-LDAP connection.
-* LDAP server needs a DNS name, and be open on port 636.
+* The on-premises LDAP server needs a DNS name, and be opened on port 636.
 * When creating broker, we can specify the LDAP login configuration with User Base distinguished name, search filter, role base DN, role base search filter. The user base supplied to the ActiveMQ broker must point to the node in the DIT where users are stored in the LDAP server.
-* Authorization is done on a per-destination basis (or wildcard, destination set) via the `cachedLdapAuthorizationMap` element, found in the broker’s `activemq.xml`. See [product doc](https://docs.aws.amazon.com/amazon-mq/latest/developer-guide/security-authentication-authorization.html) for xml examples.
-* In LDAP we can put topics and queue in a Destination OU like: `OU=Queue,OU=Destination,OU=corp,DC=corp,DC=anycompany,DC=com`, within those OU, either a wildcard or specific destination name can be provided (OU=ORDERS.$). Within each OU that represents a destination or a wildcard, we must create three security groups: admin, write, read, to include users or groups who have permission to perform the associated actions.
+
+As illustrated in figure above we have to assess the different use cases:
+
+1. A user accessing the MQ console, the authentication to the broker consoler will go to the LDAP
+1. Applications, producers or consumers, accessing the broker using the transport Connector URL, and authenticate via a service user defined in LDAP
+1. An administrator users access Amazon MQ control plan via API, using AWS CLI, to create brokers, configurations... 
+
+For user authentication via LDAP we need to
+
+* Authorization is done on a per-destination basis (or wildcard, destination set) via the `cachedLdapAuthorizationMap` element, found in the broker’s `activemq.xml`. See [Amazon MQ product doc](https://docs.aws.amazon.com/amazon-mq/latest/developer-guide/security-authentication-authorization.html) for xml examples.
+* In LDAP, we can put topics and queue in a Destination OU like: `OU=Queue,OU=Destination,OU=corp,DC=corp,DC=anycompany,DC=com`, within those OU, either a wildcard or specific destination name can be provided (OU=ORDERS.$). Within each OU that represents a destination or a wildcard, we must create three security groups: admin, write, read, to include users or groups who have permission to perform the associated actions.
 
 
-### Connection from client app
+#### Connection from client app
 
 Once deployed there are 5 differents end points to support the different protocols:
 
@@ -194,7 +216,7 @@ Most of those questions are related to the Open source version, but some to Amaz
     
 
 ???- question "When messages are moved to DLQ?"
-    Producer app can set setTimeToLive with millisecond parameter. When the message has not being delivered to consumer, ActiveMQ move it to an expiry address, which could be mapped to a dead-letter queue. In fact a TTL set on a producer, will make ActiveMQ creating an `ActiveMQ.DLQ` queue. It is recommended to setup a DLQ per queue or may be per pair of request/response queues. ActiveMQ will *never* expire messages sent to the DLQ. See [product documentation](https://activemq.apache.org/message-redelivery-and-dlq-handling.html)
+    Producer app can set `setTimeToLive` with millisecond parameter. When the message has not being delivered to consumer, ActiveMQ move it to an expiry address, which could be mapped to a dead-letter queue. In fact a TTL set on a producer, will make ActiveMQ creating an `ActiveMQ.DLQ` queue. It is recommended to setup a DLQ per queue or per pair of request/response queues. ActiveMQ will *never* expire messages sent to the DLQ. See [product documentation](https://activemq.apache.org/message-redelivery-and-dlq-handling.html)
 
     ```xml
     <policyEntry queue="order*">
@@ -208,8 +230,6 @@ Most of those questions are related to the Open source version, but some to Amaz
 ???- question "What is the constantPendingMessageLimitStrategy parameter?"
     When consumers are slow to process message from topic, and the broker is not persisting message, then messages in the RAM will impact consumer and producer performance. This parameter specifies how many messages to keep and let old messages being replace by new ones. See [slow consumer section]( http://activemq.apache.org/slow-consumer-handling.html) of the product documentation.
 
-???- question "How to connect to Rabbit MQ from different vpc or from on-premises?"
-    This [Creating static custom domain endpoints with Amazon MQ for RabbitMQ](https://aws.amazon.com/blogs/compute/creating-static-custom-domain-endpoints-with-amazon-mq-for-rabbitmq/) blog presents SSL and DNS resolution to access an NLB to facade brokers. Also the [NLB can be used cross VPCs](https://repost.aws/questions/QUlIpLMYz7Q7W86iJlZJywZw/questions/QUlIpLMYz7Q7W86iJlZJywZw/configure-network-load-balancer-across-vpcs?) that are peered. Need NLB for broker specific TCP based protocol. Security group in the broker specify inbound traffic from the NLB only. NLB target group uses the broker static VPC endpoint address. NLB can also restrict who can acccess it.
 
 ???- question "Broker clustering"
     Brokers in a cluster can share the message processing, each broker manages its own storage and connections. A core bridge is automatically created. When message arrives it will be send to one of the broker in a round-robin fashion. It can also distribute to brokers that have active consumers. There are different topologies supported: symmetric cluster where all nodes are connected to each other, or chain cluster where node is connected to two neighbores, . With a symmetric cluster each node knows about all the queues that exist on all the other nodes and what consumers they have.

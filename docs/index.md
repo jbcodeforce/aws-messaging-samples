@@ -52,6 +52,9 @@ The other Open Source engine using in Amazon MQ.
 
 To Be done.
 
+???- question "How to connect to Rabbit MQ from different vpc or from on-premises?"
+    This [Creating static custom domain endpoints with Amazon MQ for RabbitMQ](https://aws.amazon.com/blogs/compute/creating-static-custom-domain-endpoints-with-amazon-mq-for-rabbitmq/) blog presents SSL and DNS resolution to access an NLB to facade brokers. Also the [NLB can be used cross VPCs](https://repost.aws/questions/QUlIpLMYz7Q7W86iJlZJywZw/questions/QUlIpLMYz7Q7W86iJlZJywZw/configure-network-load-balancer-across-vpcs?) that are peered. Need NLB for broker specific TCP based protocol. Security group in the broker specify inbound traffic from the NLB only. NLB target group uses the broker static VPC endpoint address. NLB can also restrict who can acccess it.
+
 ## Interesting content to read
 
 * [re:Invent 2018 - Choosing the right messaging services.](https://www.youtube.com/watch?v=4-JmX6MIDDI)

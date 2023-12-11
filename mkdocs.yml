@@ -7,6 +7,7 @@ nav:
   - Labs:
     - Active MQ:
       - Via AWS Console: labs/aq-aws-console-lab.md
+      - Active MQ security: labs/activemq-ldap-sec.md
       - One way pt-to-pt JMS: labs/ow-pt-to-pt-jms.md
       - ActiveMQ with CDK: labs/activemq-cdk.md
       - Failover to standby: labs/failover-lab.md

@@ -1,0 +1,44 @@
+version: '2'
+
+services:
+  active:
+    image:  apache/activemq-classic:latest
+    hostname: active
+    container_name: active
+    ports:
+      - "8161:8161"
+      - "61616:61616"
+      - "5672:5672"
+    environment:
+      AMQ_USER: admin
+      AMQ_PASSWORD: adminpassw0rd
+      AMQ_DATA: /tmp/mq/kahadb
+      AMQ_EXTRA_ARGS: "--relax-jolokia"
+    volumes:
+      - ./data:/tmp/mq/kahadb
+      - ./config/jetty.xml:/opt/apache-activemq/conf/jetty.xml
+      - ./config/broker-1.xml:/opt/apache-activemq/conf/activemq.xml
+    networks:
+      - jms-network
+  openldap:
+    image: osixia/openldap:latest
+    container_name: openldap
+    hostname: openldap
+    tty: true
+    stdin_open: true
+    ports:
+      - "389:389"
+      - "636:636"
+    domainname: "acme.net"
+    volumes:
+      - ./ldap:/var/lib/ldap
+    environment:
+      LDAP_LOG_LEVEL: "256"
+      LDAP_ORGANISATION: "acme Inc."
+      LDAP_DOMAIN: "acme.net"
+      LDAP_BASE_DN: ""
+      LDAP_ADMIN_PASSWORD: "admin"
+      LDAP_CONFIG_PASSWORD: "config"
+networks:
+  jms-network:
+    name: jms
