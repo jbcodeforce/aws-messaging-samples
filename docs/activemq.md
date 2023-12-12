@@ -36,15 +36,15 @@ ActiveMQ has two main version of the product Active MQ 5.x (or classic) and Arte
 
 #### Hybrid cloud with AWS
 
-* During migration to the cloud, we need to support hybrid deployment where existing applications on-premises end and consume messages from queues or topics defined in Amazon MQ - Active MQ engine. The following diagram illustrates different possible integrations and the deployment of active/standby brokers in 2 availability zones.
+* During migration to the cloud, we need to support hybrid deployment where existing applications on-premises consume messages from queues or topics defined in Amazon MQ - Active MQ engine. The following diagram illustrates different possible integrations and the deployment of active/standby brokers in 2 availability zones.
 
     ![](./diagrams/on-prem-to-activemq.drawio.png)
 
-    * The on-premises applications or ETL jobs access the active broker, using public internet or private connection with Amazon Direct Connect, or site-to-site VPN. 
-    * For the public access, the internet gateway route the traffic to a network load balancer (layer 4 TCP routing), which is also HA (not represented in the figure), and then to the active Broker.
+    * The on-premises applications or ETL jobs access the active broker, using public internet or private connection with Amazon Direct Connect, or site-to-site VPN.
+    * For the public access, the internet gateway routes the traffic to a network load balancer (layer 4 TCP routing), which is also HA (not represented in the figure), to reach the active Broker.
     * The public internet traffic back from the Active MQ queue or topic to the consumer is via a NAT gateway. NAT gateways are defined in both public subnets for HA.
     * When using private gateways, the VPC route tables includes routes to the CIDR of the on-premises subnets.
-    * Security group defines firewall like policies to authorize inbound and outbound traffic.
+    * Security group defines firewall like policies to authorize inbound and outbound traffic. The port for Active MQ needs to be open. Below is such declaration:
     * EFS is used as a shared file system for messages persistence. 
     * The standby broker is linked to the active broker and ready to take the lead in case of active broker failure.
     * For higher bandwidth and secured connection, Direct Connect should be used and then the communication will be via private gateway end point.
@@ -54,11 +54,11 @@ ActiveMQ has two main version of the product Active MQ 5.x (or classic) and Arte
 
 * Network of brokers with multiple active/standby brokers, like a broker Mesh. This topology is used to increase the number of client applications. There is no single point of failure as in client/server or hub and spoke topologies. A client can failover another broker improving high availability.
 
-![](./diagrams/mq-mesh.drawio.png)
+    ![](./diagrams/mq-mesh.drawio.png)
 
 * Amazon MQ propose a mesh network of single-instance brokers with non replicated files as they use EBS volume.
 
-![](./diagrams/mq-mesh-single.drawio.png)
+    ![](./diagrams/mq-mesh-single.drawio.png)
 
 ### Hub and Spoke
 
@@ -66,47 +66,77 @@ For Hub and Spoke a central broker dispatches to other connected broker.
 
 ![](./diagrams/hub-spoke.drawio.png)
 
-## Active MQ as Amazon MQ Engine.
+## Active MQ as Amazon MQ Engine
 
-In the Amazon MQ, the primary AWS resources are an Amazon MQ message broker and its configuration. The broker can be deployed in SINGLE_INSTANCE, ACTIVE_STANDBY_MULTI_AZ, or CLUSTER_MULTI_AZ.
+In the Amazon MQ, the primary AWS resources are the Amazon MQ message broker and its configuration. The broker can be deployed in SINGLE_INSTANCE, ACTIVE_STANDBY_MULTI_AZ, or CLUSTER_MULTI_AZ. The configuration can be done [via the AWS console](./labs/aq-aws-console-lab.md), AWS CLI, Cloud Formation or [CDK](./labs/activemq-cdk.md)
 
 ### Security considerations
 
-Active MQ is coming with its own way to define access control to Queue, Topics and Brokers. Amazon MQ uses IAM for creating, updating, and deleting operations, but native ActiveMQ authentication for brokers. The following figure illustrates the security context:
+Active MQ is coming with its own way to define access control to Queue, Topics and Brokers. Amazon MQ uses IAM for creating, updating, and deleting operations on the message broker or configuration, and native ActiveMQ authentication for connection to brokers. The following figure illustrates those security contexts:
 
 
 ![](https://jbcodeforce.github.io/aws-studies/infra/diagrams/messaging/amq-sec-users.drawio.png)
 
 We define three users: 
 
-1. An IAM administrator who manages security within an AWS account, specifically IAM users, roles and security policies. This administrator has full access to CloudWatch logs and CloudTrail for API usage auditing.
-1. An MQ service administrator, manages the MQ brokers and configuration via the AWS Console, AWS CLI or APIs. This administrator should be able to define brokers and configurations, networking access controls, security groups, and may be anything related to consumer and producer apps. He/she should have access to CloudWatch Logs and CloudTrail logs too.
-1. Developer defining queue, topics, and get broker URL and credentials.
-
+1. An **IAM administrator** who manages security within an AWS account, specifically IAM users, roles and security policies. This administrator has full access to CloudWatch logs and CloudTrail for API usage auditing. The IAM policy uses action on "mq:" prefix, and possible resources are `broker` and `configuration`. 
+1. An **MQ service administrator**, manages the MQ brokers and configuration via the AWS Console, AWS CLI or APIs. This administrator should be able to define brokers and configurations, networking access controls, security groups, and may be anything related to consumer and producer apps. He/she should have access to CloudWatch Logs and CloudTrail logs too. An administrator needs to signin to amazon api and get the [permissions to act on the broker](https://docs.aws.amazon.com/amazon-mq/latest/developer-guide/security-api-authentication-authorization.html#security-permissions-required-to-create-broker) and the underlying EC2 instances.
+1. Developer defining queue, topics, and get broker URL and credentials. Developer users can be define in external active directory or in broker configuration file.
 
 Amazon MQ management operations like creating, updating and deleting brokers require IAM credentials and are not integrated with LDAP.
 
+As the Amazon MQ control plane will do operations on other AWS services, there is a service-linked role (`AWSServiceRoleForAmazonMQ`) defined automatically when we define a broker, with the security policies ([AmazonMQServiceRolePolicy](https://console.aws.amazon.com/iam/home#policies/arn:aws:iam::aws:policy/aws-service-role/AmazonMQServiceRolePolicy)) to get the brokers deployed. A service-linked role is a unique type of IAM role that is linked directly to Amazon MQ.
+
+
+Amazon MQ uses ActiveMQ's Simple Authentication Plugin to restrict reading and writing to destinations. See [this product documentation](https://docs.aws.amazon.com/amazon-mq/latest/developer-guide/security-authentication-authorization.html) for details.
 
 #### LDAP integration
 
-* The LDAP integration is done via ActiveMQ JAAS plugin
+* The LDAP integration is done via [ActiveMQ JAAS plugin](https://activemq.apache.org/security).
 
     ![](./diagrams/amq-ldap.drawio.png)
 
 * A service account, defined in LDAP, is required to initiate a connection to an LDAP server. It sets up LDAP authentication for the brokers. Client connections are authenticated through this broker-LDAP connection.
 * The on-premises LDAP server needs a DNS name, and be opened on port 636.
-* When creating broker, we can specify the LDAP login configuration with User Base distinguished name, search filter, role base DN, role base search filter. The user base supplied to the ActiveMQ broker must point to the node in the DIT where users are stored in the LDAP server.
+* When creating broker, we can specify the LDAP login configuration with User Base distinguished name, search filter, role base DN, role base search filter. The user base supplied to the ActiveMQ broker must point to the node in the Directory Information Tree where users are stored in the LDAP server.
 
-As illustrated in figure above we have to assess the different use cases:
+As illustrated in figure above, we have to assess the different use cases:
 
-1. A user accessing the MQ console, the authentication to the broker consoler will go to the LDAP
-1. Applications, producers or consumers, accessing the broker using the transport Connector URL, and authenticate via a service user defined in LDAP
-1. An administrator users access Amazon MQ control plan via API, using AWS CLI, to create brokers, configurations... 
+1. A user accessing the MQ console, the authentication to the broker console will go to the LDAP server
+1. Applications, producers or consumers, accessing the broker using the transport Connector URL, and authenticate via a service user defined in LDAP.
+1. An administrator users access Amazon MQ control plane via API, using AWS CLI, to create brokers, configurations. This user needs to be part of the `amazonmq-console-admins` group.
 
-For user authentication via LDAP we need to
+For user authentication via LDAP we need to define the connection to LDAP in the broker configuration file, which also includes where to search the JMS topic and queue information in the DIT:
 
-* Authorization is done on a per-destination basis (or wildcard, destination set) via the `cachedLdapAuthorizationMap` element, found in the broker’s `activemq.xml`. See [Amazon MQ product doc](https://docs.aws.amazon.com/amazon-mq/latest/developer-guide/security-authentication-authorization.html) for xml examples.
-* In LDAP, we can put topics and queue in a Destination OU like: `OU=Queue,OU=Destination,OU=corp,DC=corp,DC=anycompany,DC=com`, within those OU, either a wildcard or specific destination name can be provided (OU=ORDERS.$). Within each OU that represents a destination or a wildcard, we must create three security groups: admin, write, read, to include users or groups who have permission to perform the associated actions.
+```xml
+<plugins>
+    <jaasAuthenticationPlugin configuration="LdapConfiguration" /> 
+    <authorizationPlugin> 
+     <map> 
+       <cachedLDAPAuthorizationMap
+            queueSearchBase="ou=Queue,ou=Destination,ou=ActiveMQ,dc=systems,dc=anycompany,dc=com"
+            topicSearchBase="ou=Topic,ou=Destination,ou=ActiveMQ,dc=systems,dc=anycompany,dc=com"
+            tempSearchBase="ou=Temp,ou=Destination,ou=ActiveMQ,dc=systems,dc=anycompany,dc=com"
+            refreshInterval="300000"
+            legacyGroupMapping="false"
+        />
+         ...
+```
+
+* Authorization is done on a per-destination basis (or wildcard, destination set) via the `cachedLdapAuthorizationMap` element, found in the broker’s `activemq.xml`. See [Amazon MQ product doc](https://docs.aws.amazon.com/amazon-mq/latest/developer-guide/security-authentication-authorization.html) for xml examples and [Active MQ doc with OpenLDAP example](https://activemq.apache.org/cached-ldap-authorization-module).
+* In LDAP, we can define topics and queues in a Destination OU like: `dn: cn=carrides,ou=Queue,ou=Destination,ou=ActiveMQ,ou=systems,dc=anycompany,dc=com`, within those OU, either a wildcard or specific destination name can be provided (OU=ORDERS.$). Within each OU that represents a destination or a wildcard, we must create three security groups: admin, write, read, to include users or groups who have permission to perform the associated actions.
+
+```ldif
+dn: cn=admin,cn=carrides,ou=Queue,ou=Destination,ou=ActiveMQ,ou=systems,dc=anycompany,dc=com 
+cn: admin 
+description: Admin privilege group, members are roles 
+member: cn=admin 
+member: cn=webapp 
+objectClass: groupOfNames 
+objectClass: top 
+```
+
+Adding a user to the admin security group for a particular destination will enable the user to create and delete that queue or topic.
 
 
 #### Connection from client app

@@ -1,6 +1,7 @@
 from aws_cdk import (
     Duration,
     Stack,
+    Tags,
     aws_cloud9_alpha as cloud9,
     CfnOutput,
     aws_ec2 as ec2 
@@ -22,5 +23,7 @@ class Cloud9Stack(Stack):
                                     ec2_environment_name="Cloud9ForDemo",
                                     owner=cloud9.Owner.account_root(self.account),
                                     image_id=cloud9.ImageId.AMAZON_LINUX_2)
+        Tags.of(c9env).add("SolutionName", "demo")
+        Tags.of(c9env).add("Environment", "dev")
         CfnOutput(self, "URL", value=c9env.ide_url)
         CfnOutput(self, "EC2_ARN", value=c9env.ec2_environment_arn)

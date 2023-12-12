@@ -6,7 +6,7 @@ services:
     container_name: producer
     hostname: producer
     environment:
-      ACTIVEMQ_URL: ssl://b-1b291622-5c8f-41cf-9ebc-a567f91ef607-1.mq.us-west-2.amazonaws.com:61617
+      ACTIVEMQ_URL: ${AMQ_URL}
       ACTIVEMQ_USERNAME: admin
       ACTIVEMQ_PASSWORD: alongenoughpassw0rd
       QUEUE_NAME: carrides
@@ -20,7 +20,7 @@ services:
     hostname: consumer
     container_name: consumer
     environment:
-      ACTIVEMQ_URL: ssl://b-1b291622-5c8f-41cf-9ebc-a567f91ef607-1.mq.us-west-2.amazonaws.com:61617
+      ACTIVEMQ_URL: ${AMQ_URL}
       ACTIVEMQ_USERNAME: admin
       ACTIVEMQ_PASSWORD: alongenoughpassw0rd
       QUEUE_NAME: carrides

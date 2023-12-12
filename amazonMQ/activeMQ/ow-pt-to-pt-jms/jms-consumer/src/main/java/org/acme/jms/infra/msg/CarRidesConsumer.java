@@ -98,6 +98,7 @@ public class CarRidesConsumer implements MessageListener, ExceptionListener{
         if (messageConsumer == null || consumerSession == null) {
             jmsContext = connectionFactory.createContext();
             consumerSession = connection.createSession(true,Session.CLIENT_ACKNOWLEDGE);
+            //ActiveMQJMSConstants.INDIVIDUAL_ACKNOWLEDGE
             inQueue = consumerSession.createQueue(inQueueName);
             messageConsumer = consumerSession.createConsumer(inQueue);
             messageConsumer.setMessageListener(this);

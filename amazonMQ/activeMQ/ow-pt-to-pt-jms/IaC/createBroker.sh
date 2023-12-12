@@ -1,4 +1,4 @@
-aws mq create-broker  --broker-name singleDemo \
+aws mq create-broker  --broker-name j9r-demo \
    --no-auto-minor-version-upgrade \
    --configuration Id=c-1e012ad7-5374-47fa-b9ee-f71d7f044e7a,Revision=1 \
    --deployment-mode SINGLE_INSTANCE\

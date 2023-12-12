@@ -3,17 +3,18 @@
 !!! Info
     Created 09/2023 - Updated 11/27/23
 
-We assume you have CDK, AWS cli installed.
+Pre-requisites: CDK, AWS cli installed on developer host or Cloud9 environment.
 
 ## Common Stack
 
-The first stack is used to define a VPC with 2 AZs, 2 public subnets, 2 private subnets, 1 NAT gateway (for cost reason, in real production deployment we should have two), routes, and Network load balancer. The deployment looks like the following diagram:
+The first stack is used to define a VPC with 2 AZs, 2 public subnets, 2 private subnets, 1 NAT gateway (for cost reason, in real production deployment we should have two NATs), route tables with default routes, and Network Load Balancer. The deployment looks like in the following diagram:
 
 ![](./diagrams/networking-stack.drawio.svg)
 
 To create the stack go to the `IaC-common` folder and use `cdk` CLI.
 
 ```sh
+cd IaC-common
 # under IaC-common folder
 cdk synth
 cdk deploy --all
@@ -29,13 +30,13 @@ Here are the resource created:
 * Lambda function for removing all inbound/outbound rules from the VPC default security group
 * Cloud 9 environment
 
-For a production deployment, using Amazon MQ clustering, we will use a 3 AZs deployment as in figure below:
+For a production deployment, using Amazon MQ clustering, we will use a 3 AZs deployment as in the figure below:
 
 ![](./diagrams/networking-stack-3AZs.drawio.svg)
 
 ## Active MQ Active/Standby
 
-To deploy an Amazon MQ - Active MQ with active and standby deployment use the stack under [amazonMQ/activeMQ/IaC/active-standby](https://github.com/jbcodeforce/aws-messaging-study/tree/main/amazonMQ/activeMQ/IaC/active-standby) which adds the following to current physical architecture:
+To deploy an Amazon MQ - Active MQ with active and standby deployment use the stack under [amazonMQ/activeMQ/IaC/active-standby](https://github.com/jbcodeforce/aws-messaging-study/tree/main/amazonMQ/activeMQ/IaC/active-standby) which adds the following elements to current physical architecture:
 
 ![](./diagrams/amq-act-stby-stack.drawio.png)
 

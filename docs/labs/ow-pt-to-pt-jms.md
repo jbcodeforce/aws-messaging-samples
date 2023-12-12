@@ -89,6 +89,83 @@ docker compose up -d
 
 ## Code Explanation
 
+The microservice uses the onion architecture from domain-driven design practices with an example of package structure as:
+
+```sh
+└── org
+    └── acme
+        └── jms
+            ├── infra
+            │   ├── api
+            │   │   ├── CarRideDTO.java
+            │   │   ├── CarRideResource.java
+            │   │   └── SimulControl.java
+            │   └── msg
+            │       └── CarRideMsgProducer.java
+            └── model
+                └── CarRide.java
+```
+
+The APIs are classical REST resources. The business object is a CarRide to represent booking an autonoumous car ride. The messaging includes specific code for producer, consumer or both in the case pf request/response implementation.
+
+As an example, the CarRideProducer is unique in the virtual machine via the ApplicationScoped annotation, and implements ExceptionListener to be able to implement some resilience mechanism in case of broker failover.
+
+```java
+@ApplicationScoped
+public class CarRidesProducer implements ExceptionListener{
+```
+
+As a Quarkus app, properties are defined in `src/main/resources/application.properties` and injected in the class.
+
+```java
+    @Inject
+    @ConfigProperty(name="queue.name")
+    public String outQueueName;
+    @Inject
+    @ConfigProperty(name="activemq.url")
+    public String connectionURLs;
+```
+
+Then the implementation approach is to start to connect to the Broker via JMS as soon as the application is started. (Listen to start event)
+
+```java
+void onStart(@Observes StartupEvent ev) {
+        try {
+            restablishConnection();
+```
+
+The connection setup uses classical JMS programming model, with the ConnectionFactory coming from ActiveMQ.
+
+```java
+private synchronized void restablishConnection() throws JMSException {
+        if (connection == null) {
+            displayParameters();
+            connectionFactory = new ActiveMQConnectionFactory(connectionURLs);
+            connection = connectionFactory.createConnection(user, password);
+            connection.setClientID("p-" + System.currentTimeMillis());
+            connection.setExceptionListener(this);
+        } 
+        if (producer == null || producerSession == null) {
+            producerSession = connection.createSession();
+            outQueue = producerSession.createQueue(outQueueName);
+            producer = producerSession.createProducer(outQueue);
+            producer.setTimeToLive(60000); // one minute
+        }
+        connection.start();
+        logger.info("Connect to broker succeed");
+    }
+```
+
+So the pom.xml needs to includes the Active MQ jars, as well as the jms api jar:
+
+```xml
+    <dependency>
+        <groupId>org.apache.activemq</groupId>
+        <artifactId>activemq-client</artifactId>
+        <version>5.18.3</version>
+    </dependency>
+```
+
 ## Deploy on AWS
 
 * Create ECR repositories for the two apps:

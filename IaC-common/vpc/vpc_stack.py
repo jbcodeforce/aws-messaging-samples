@@ -1,6 +1,7 @@
 from aws_cdk import (
     # Duration,
     Stack,
+    Tags,
     aws_ec2 as ec2,
     CfnOutput
 )
@@ -19,11 +20,11 @@ class VpcStack(Stack):
         search = self.lookup_vpc(vpc_name)
         if search == None:
             self.vpc=self.create_vpc(vpc_name)
-            self.add_security_groups(self.vpc)
         else:
             print("found vpc")
             self.vpc=ec2.Vpc.from_lookup(self, "lookup", vpc_name=vpc_name, is_default=False)
         print(self.vpc.vpc_id)
+
         CfnOutput(self,"VPC", value=self.vpc.vpc_id, export_name=vpc_name)
 
     
@@ -48,8 +49,10 @@ class VpcStack(Stack):
         vpc = ec2.Vpc(self, vpc_name,
             max_azs=2,
             vpc_name=vpc_name,
-            nat_gateways=0,
+            nat_gateways=1,
             ip_addresses=ec2.IpAddresses.cidr(CIDR),
+            enable_dns_hostnames=True,
+            enable_dns_support=True,
             subnet_configuration=[
                 ec2.SubnetConfiguration(
                     name="public",
@@ -63,10 +66,11 @@ class VpcStack(Stack):
                 )
             ]
         )
+        Tags.of(vpc).add("SolutionName", "demo")
+        Tags.of(vpc).add("Environment", "dev")
         return vpc
     
-    def add_security_groups(self, vpc: ec2.Vpc) -> None:
-        print("add security groups")
+    
 
     def getCIDR(self) -> str:
         return CIDR
