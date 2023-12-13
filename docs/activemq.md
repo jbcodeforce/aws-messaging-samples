@@ -162,7 +162,7 @@ Adding failover in broker url ensures that whenever server goes up, it will reco
 ??? info "Network mapping"
     On AWS, each of those failover URL are in fact mapped to IP@ of a ENI. Each broker node has two [ENIs connected](https://docs.aws.amazon.com/amazon-mq/latest/developer-guide/connecting-to-amazon-mq.html) to two different networks. The `b-9f...-1` is mapped to 10.42.1.29 for example on subnet 1, while `b-9f...-2` is 10.42.0.92 to subnet 0.
 
-When the active broker reboot, the client applications may report issue but reconnect to the backup broker. Below is an example of logs:
+When the active broker reboots, the client applications may report issue but reconnect to the backup broker. Below is an example of logs:
 
 ```sh
 Transport: ssl://b-d....-2.mq.us-west-2.amazonaws.com/10.42.0.113:61617] WARN org.apache.activemq.transport.failover.FailoverTransport - Transport (ssl://b-d...-2.mq.us-west-2.amazonaws.com:61617) failed , attempting to automatically reconnect: {}
@@ -227,16 +227,27 @@ See [the product documentation for persistence configuration.](https://activemq.
 Most of those questions are related to the Open source version, but some to Amazon MQ deploymento of Active MQ.
 
 ???- question "What needs to be done to migrate to Artemis"
-    As of today Amazon MQ, Active MQ supports on Classic deployment and API. Moving to Artemis, most of the JMS code will work. The project dependencies need to be changed, the ActiveMQ connection factory class is different in term of package names, and if you use Jakarta JMS then package needs to be changed in the JMS producer and consumer classes.
+    As of today Amazon MQ, Active MQ supports only Classic deployment and API. Moving to Artemis, means deploying on your own EC2 instances. Most of the JMS code will work or with minimum refactoring for the connection factory. The project dependencies need to be changed, the ActiveMQ connection factory class is different in term of package names, and if you use Jakarta JMS then package needs to be changed in the JMS producer and consumer classes.
+
+???- question "What are the CLI commands that can be run on Amazon MQ?"
+    See [this list](https://awscli.amazonaws.com/v2/documentation/api/latest/reference/mq/index.html). To run those we need a user or an IAM role with `mq:` actions allowed. 
+
+???- question "How to create queue or resources?"
+    With open source Active MQ, we can use JMS API as they can be created dynamically via code, and using JMX. Static definitions can be done in the broker.xml file:
+    
+    ```
+    ```
+    
+    Amazon MQ does not support JMX access, so queue needs to be created using code.
 
 ???- question "What is the advantage of replicas vs shared storage?"
     Shared storage needs to get SAN replication to ensure DR at the storage level. If not the broker file system is a single point of failure. It adds cost to the solution but it performs better. Replicas is ActiveMQ integrate solution to ensure High availability and sharing data between brokers. Slave broker copies data from Master. States of the brokers are not exchanged with replicas, only messages are. For Classic, JDBC message store could be used. Database replication is then used for DR. When non durable queue or topic are networked, with failure, inflight messages may be lost.
 
 ???- question "What is the difference between URL failover and implementing an ExceptionListener?"
-    JMS has no specification on failover for JMS provider. When broker fails, there will be a connection Exception. The way to manage this exception is to use the asynchronous `ExceptionListener` interface which will give developer maximum control over when to reconnect, assessing what type of JMS error to better act on the error. ActiveMQ offers the failover transport protocol, is for connection failure, and let the client app to reconnect to another broker as part of the URL declaration. Sending message to the broker will be blocked until the connection is restored. Use `TransportListener` interface to understand what is happening. This is a good way to add logging to the application to report on the connection state.
+    Java Messaging Service  has no specification on failover for JMS provider. When broker fails, there will be a connection Exception. The way to manage this exception is to use the asynchronous `ExceptionListener` interface which will give developer maximum control over when to reconnect, assessing what type of JMS error to better act on the error. ActiveMQ offers the failover transport protocol, is for connection failure, and let the client app to reconnect to another broker as part of the URL declaration. Sending message to the broker will be blocked until the connection is restored. Use `TransportListener` interface to understand what is happening. This is a good way to add logging to the application to report on the connection state.
 
 ???- question "what are the critical metrics / log patterns that should be monitored in respect to MQ logs?"
-    CloudWatch metrics has a specific Amazon MQ dashboard with CpuUtilization, CurrentConnectionCount, networking in/ou, producer and consumer counts. We can add out own metrics from a list of broker or queue specific ones. The following may be of interest for storage: (See [this re:post](https://repost.aws/knowledge-center/mq-persistent-store-is-full-errors)):
+    Amazon CloudWatch metrics has a specific Amazon MQ dashboard with CpuUtilization, CurrentConnectionCount, networking in/ou, producer and consumer counts. We can add our own metrics using the broker or queue specific ones. The following may be of interest for storage: (See [this re:post](https://repost.aws/knowledge-center/mq-persistent-store-is-full-errors)):
         
     * Store Percentage Usage
     * Journal Files for Full Recovery: # of journal files that are replayed after a clean shutdown.
@@ -289,6 +300,7 @@ Most of those questions are related to the Open source version, but some to Amaz
     * It can auto-discover brokers and provide an aggregated view of multiple ActiveMQ instances.
     * There are Jolokia client libraries and tools available for Java, JavaScript, Go etc which simplify working with ActiveMQ via Jolokia.
     * Jolokia is not tied to ActiveMQ specifically and can work across different JMX-enabled applications. This makes it reusable.
+    * Amazon MQ does not support Jolokia.
 
 
 ## To address
