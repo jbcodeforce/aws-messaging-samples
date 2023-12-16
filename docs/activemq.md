@@ -36,6 +36,8 @@ ActiveMQ has two main version of the product Active MQ 5.x (or classic) and Arte
 
 #### Hybrid cloud with AWS
 
+Amazon MQ is a managed, highly available message broker for Apache ActiveMQ. The service manages the provisioning, setup, and maintenance of ActiveMQ. 
+
 * During migration to the cloud, we need to support hybrid deployment where existing applications on-premises consume messages from queues or topics defined in Amazon MQ - Active MQ engine. The following diagram illustrates different possible integrations and the deployment of active/standby brokers in 2 availability zones.
 
     ![](./diagrams/on-prem-to-activemq.drawio.png)
@@ -45,7 +47,7 @@ ActiveMQ has two main version of the product Active MQ 5.x (or classic) and Arte
     * The public internet traffic back from the Active MQ queue or topic to the consumer is via a NAT gateway. NAT gateways are defined in both public subnets for HA.
     * When using private gateways, the VPC route tables includes routes to the CIDR of the on-premises subnets.
     * Security group defines firewall like policies to authorize inbound and outbound traffic. The port for Active MQ needs to be open. Below is such declaration:
-    * EFS is used as a shared file system for messages persistence. 
+    * EFS is used as a shared file system for messages persistence.
     * The standby broker is linked to the active broker and ready to take the lead in case of active broker failure.
     * For higher bandwidth and secured connection, Direct Connect should be used and then the communication will be via private gateway end point.
     * Lambda function may be used to do light processing like data transformation, or data enrichment and then to call directly SaaS services. When more complex flow, like stateful flows, are needed, Amazon Step function can also be used (also serverless).
@@ -302,6 +304,9 @@ Most of those questions are related to the Open source version, but some to Amaz
     * Jolokia is not tied to ActiveMQ specifically and can work across different JMX-enabled applications. This makes it reusable.
     * Amazon MQ does not support Jolokia.
 
+## Code samples
+
+* [Point to point producer to consumer using JMS](./labs/ow-pt-to-pt-jms.md) running locally to start playing with Active MQ classic, or deploy the two apps and the Broker on Amazon MQ with AWS CDK as infrastructure as code.
 
 ## To address
 
@@ -313,4 +318,6 @@ Most of those questions are related to the Open source version, but some to Amaz
 
 ## Good source of informations
 
+* [Amazon MQ - Active MQ product doc](https://docs.aws.amazon.com/amazon-mq/latest/developer-guide/working-with-activemq.html)
 * [My own summary of Amazon MQ](https://jbcodeforce.github.io/aws-studies/infra/messaging/#amazon-mq)
+* [Using Amazon MQ as an event source for AWS Lambda](https://aws.amazon.com/blogs/compute/using-amazon-mq-as-an-event-source-for-aws-lambda/)

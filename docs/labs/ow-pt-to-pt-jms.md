@@ -168,7 +168,7 @@ So the pom.xml needs to includes the Active MQ jars, as well as the jms api jar:
 
 ## Deploy on AWS
 
-* Create ECR repositories for the two apps:
+* Create ECR repositories for the two apps after building them:
 
     ```sh
     aws ecr create-repository --repository-name j9r/amq-jms-consumer
@@ -189,16 +189,20 @@ So the pom.xml needs to includes the Active MQ jars, as well as the jms api jar:
 
     ```
 
-* Create ECS Cluster in an existing VPC
+* Before creating broker we may assess existing Configurations:
 
     ```sh
-    aws ecs create-cluster --cluster-name demo-ecs
+    # First get list of existing configurations
+    aws mq list-configurations
+    # Get the Id of the config relevant to broker.
     ```
 
-* Create Active MQ broker using the command script: in [ow-pt-to-pt-jms/IaC.createBroker.sh]. 
+* If needed we can create a condiguration from an existing broker.xml we have prepared
+
+* Create Active MQ broker using the command script: in [ow-pt-to-pt-jms/IaC/createBroker.sh](https://github.com/jbcodeforce/aws-messaging-study/blob/main/amazonMQ/activeMQ/IaC/createBrokers.sh):
 
     ```sh
-    aws mq list-configurations
+    export CONFIG_ID=
     ```
 
 ### Using AWS CLI

@@ -6,7 +6,9 @@ aws mq create-broker  --broker-name j9r-demo \
    --engine-type ACTIVEMQ \
    --engine-version 5.17.6 \
    --host-instance-type mq.t2.micro \
+   --tags Environment=dev,SolutionName=amq-demo \
    --publicly-accessible \
    --region us-west-2 \
+   --output yaml \
    --users ConsoleAccess=true,Groups=admin,Password=alongenoughpassw0rd,Username=admin,ReplicationUser=false \
    --logs Audit=false,General=true
