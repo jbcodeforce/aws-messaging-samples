@@ -12,9 +12,12 @@ nav:
       - ActiveMQ with CDK: labs/activemq-cdk.md
       - Failover to standby: labs/failover-lab.md
       - JMS Req-ReplyTo: labs/classic-req-reply-jms.md
+    - SQS:
+      - Basic: labs/sqs/index.md
+      - S3-multi-tenant-event: labs/sqs/s3-tenants-async-processing.md
     - Artemis JMS Req-ReplyTo: req-reply-jms.md
     - IBM MQ labs: labs/ibm-mq.md
-  - Amazon MQ notes: https://jbcodeforce.github.io/aws-studies/infra/messaging/#amazon-mq
+  - Amazon MQ notes: https://jbcodeforce.github.io/ska/infra/messaging/#amazon-mq
 theme: 
   name: material
   palette:

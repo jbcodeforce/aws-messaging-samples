@@ -1,0 +1,16 @@
+{'ResponseMetadata': {
+     'RequestId': '0ZKJMWSP7NE5XQWN', 
+     'HostId': 'LzdVjzAcDAGc44C9wYrgSoBOtrX6+Lg9gFhS00XKZjFVRjPLCwMaLAFYuFnTd0wgvhKNIUib8e8=', 
+     'HTTPStatusCode': 200, 
+     'HTTPHeaders': {
+        'x-amz-id-2': 'LzdVjzAcDAGc44C9wYrgSoBOtrX6+Lg9gFhS00XKZjFVRjPLCwMaLAFYuFnTd0wgvhKNIUib8e8=', 
+        'x-amz-request-id': '0ZKJMWSP7NE5XQWN', 
+        'date': 'Tue 26 Dec 2023 23: 53: 16 GMT', 
+        'x-amz-bucket-region': 'us-west-2', 
+        'x-amz-access-point-alias': 'false', 
+        'content-type': 'application/xml', 
+        'server': 'AmazonS3'
+        }, 
+    'RetryAttempts': 0
+    }
+}
