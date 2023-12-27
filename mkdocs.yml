@@ -4,6 +4,7 @@ site_author: Jerome Boyer
 nav:
   - Introduction: index.md
   - Active MQ: activemq.md
+  - Amazon SQS: sqs.md
   - Labs:
     - Active MQ:
       - Via AWS Console: labs/aq-aws-console-lab.md

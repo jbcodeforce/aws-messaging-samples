@@ -148,57 +148,125 @@ Here is an example of tenant group definition maps with one S3 bucket, and one u
 }
 ```
 
-See the code to [create tenant group]()
+See the code to [create tenant group](https://github.com/jbcodeforce/aws-messaging-study/blob/main/SQS/s3-sqs-fanout/createGroupTenant.py)
 
-Then a tenant
+When onboarding a tenant, the platform defines a unique tenant_id, and links it to the target bucket and prefix within a persisted Hash Map. This will be used by the SaaS SDK to put the file in the good bucket / 'folder'.
+
+```json
+{
+    "Name": {"S": "tenant-1"},
+    "RootS3Bucket": {"S": "403993201276-tenant-group-1"}, 
+    "Region": {"S": "us-west-2"}, 
+    "Status": {"S": "ACTIVE"}, 
+    "BasePrefix": {"S": "tenant-1/"}, 
+    "GroupName": {"S": "tenant-group-1"}
+}    
+```
+
+With this information we can try to use the different architectures.
 
 ### SQS only
 
-The following approach illustrates the simplest asynchrnonous architecture, using S3 event notification based on prefixes and one queue per tenant.
+The following approach illustrates the simplest asynchronous architecture, using different S3 event notifications based on prefixes and one queue per tenant.
 
 ![](./diagrams/s3-sqs-fanout.drawio.png)
 
-* When onboarding a tenant, the platform defines a unique tenant_id, and links it to the target bucket and prefix within a persisted Hash Map. This will be used by the SaaS SDK to put the file in the good bucket / 'folder'.
-
-    ```json
-        { "tenants" : [
-            { "tenant_id": "T01",
-             "main_bucket_name": "tenant-group-1",
-             "base-prefix": "T01/"
-            }
-        ]}
-        
-    ```
-
-* Using event notification definition, we can fanout at the level of the event notification definition, one SQS queue per tenant. Below is an example of code to create the event notification and queue.
+* Using event notification definition, we can fanout at the level of the event notification definition, one SQS queue per tenant. Below is an example of code to create the S3 event notification dedicated per tenant:
 
     ```python
+    def eventNotificationPerTenant(tenantName,bucketName,queueArn):
+    response = s3.put_bucket_notification_configuration(
+        Bucket=bucketName,
+        NotificationConfiguration= {
+            'QueueConfigurations': [
+            {
+                'QueueArn': queueArn,
+                'Events': [
+                    's3:ObjectCreated:*'|'s3:ObjectRemoved:*'|'s3:ObjectRestore:*'| 's3:Replication:*'
+                ],
+                'Filter': {
+                    'Key': {
+                        'FilterRules': [
+                            {
+                                'Name': 'prefix',
+                                'Value': tenantName + "/"
+                            },
+                        ]
+                    }
+                }
+            },
+        ]})
     ```
+
+* The queue ARN will be the queue per tenant.
+* This approach will scale at the level of the number of event-notification that could be created by bucket.
+* The negatives of this approach is the big number of queues and event-notification to be created when we need to scale at hundred of thousand tenants. Also there is no routing logic applied. The filtering on the file to process will be done by the event-driven transform process.
 
 ### S3 to Lambda to SQS
 
-The more flexible implementation may use Lambda function as a target to S3 Event Notification, to support a very flexible routing implementation. If the event-driven processing is exposed via HTTP the lambda can directly call the good end points.
+The more flexible implementation may use Lambda function as a target to S3 Event Notification, to support very flexible routing implementations. If the event-driven processing is exposed via HTTP the Lambda function may directly call the good HTTP endpoint.
 
-![](./diagrams/s3-lambda-fanout.drawio.png)
+![](./diagrams/s3-lambda-fanout.drawio.png){ width=750 }
 
-Or if the processing needs to be asynchronous then we can add queues before the event-driven processing.
+Lambda can scale at thousand of instances in parallel. The solution uses one queue per bucket.
 
-![](./diagrams/s3-lambda-sqs-fanout.drawio.png)
+As an alternate if the processing needs to be asynchronous then we can add queues before the event-driven processors:
 
-Lambda can scale at thousand of instance in parallel.
+![](./diagrams/s3-lambda-sqs-fanout.drawio.png){ width=750 }
+
+The Lambda function can be a target of the S3 event notification:
+
+```python
+def eventNotificationPerTenantViaLambda(tenantName,bucketName,functionArn):
+    response = s3.put_bucket_notification_configuration(
+        Bucket=bucketName,
+        NotificationConfiguration= {
+          'LambdaFunctionConfigurations': [
+            {
+                'LambdaFunctionArn': functionArn,
+                'Events': [
+                     's3:ObjectCreated:*'|'s3:ObjectRemoved:*'|'s3:ObjectRestore:*'| 's3:Replication:*'|'s3:LifecycleTransition'|'s3:IntelligentTiering'|'s3:ObjectAcl:Put'|'s3:LifecycleExpiration:*'|'s3:LifecycleExpiration:Delete'|'s3:LifecycleExpiration:DeleteMarkerCreated'|'s3:ObjectTagging:*',
+                 ],
+                'Filter': {
+                    'Key': {
+                        'FilterRules': [
+                            {
+                               'Name': 'prefix',
+                                'Value': tenantName + "/"
+                            },
+                        ]
+                    }
+                }
+            },
+            ]
+        },
+        )
+```
+
+Obviously we can bypass the front end queue, and all the SQS queues if we want to be more synchronous. Except that the S3 Event notification will be posted to an internal queue in the Lambda service. But this queue is transparent to the developer. 
 
 ### SNS - SQS
 
-In many Fanout use cases, one of the solution is to combine SNS with SQS.
+In many Fanout use cases, one of the solution is to combine SNS with SQS. The S3 event notification target is now a SNS topic.
 
 ![](./diagrams/s3-sns-sqs-fanout.drawio.png)
 
+The SNS filtering defines the target SQS queue. The event-driven processes get their tenant based workload.
 
 ### SQS - Event Bridge
 
-Event Bridge could be a solution if the file processing is exposed as an HTTP end point. Routing rule will be used to select the target end-point depending of the tenant information. But there is a limit of 2000 rules, so it may not be a valid solution to address the use case of thousand of tenants.
+Event Bridge could be a solution if the file processing is exposed with HTTP endpoint. Routing rule will be used to select the target end-point depending of the tenant information. But there is a limit of 2000 rules per event buses, so it may not be a valid solution to address the use case of thousand of tenants.
 
 ![](./diagrams/s3-sqs-eb-fanout.drawio.png)
 
 
 ### SQS - MSK
+
+Finally Kafka may be a solution to stream the S3 event notification to it, via a queue. The interest will be to be able to replay the events.
+
+![](./diagrams/s3-sqs-msk-fanout.drawio.png)
+
+It may be more complex to deploy as we need to define a MSK cluster, and Kafka Connect from SQS source connector. The Event-driven processes need to consume from Kafka. Event ordering will be kept. It will scale to hundred of consumers.
+
+## Demonstration
+

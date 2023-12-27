@@ -1,6 +1,7 @@
 import boto3,os,datetime,json
 
-GROUP_BUCKET_NAME="tenant-group-1"
+TENANT_GROUP_NAME="tenant-group-1"
+TENANT_GROUP_TABLE_NAME="TenantGroups"
 ACCOUNT = os.environ.get('AWS_ACCOUNT_ID')
 REGION = os.environ.get('AWS_DEFAULT_REGION')
 
@@ -22,22 +23,60 @@ def defineTenantGroup(bucketName):
    
 def persistTenantGroup(groupName, bucketName, location, queueURL, queueArn):
     creationDate = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    groupTenant = {'name': groupName, 
-              'bucket': bucketName,
-              'region': location, 
-              'queueURL': queueURL,
-              'queueArn': queueArn,
-              'status': 'ACTIVE', 
-              'created-at': creationDate, 'updated-at': creationDate }
+    groupTenant = {'GroupName': {'S': groupName}, 
+              'BucketName': {'S': bucketName },
+              'Region': {'S': location }, 
+              'QueueURL': { 'S': queueURL },
+              'QueueArn': {'S': queueArn }, 
+              'Status': {'S': 'ACTIVE' }, 
+              'Created-at': {'S': creationDate }, 
+              'Updated-at': {'S': creationDate }  
+              }
     persistToDatabase(groupTenant)
     return groupTenant
 
 
-def persistToDatabase(groupTenant):
-    pass
+def persistToDatabase(tenantGroup):
+    client = boto3.client('dynamodb')
+    # create dynamodb table if not exists
+    try:
+        client.describe_table(TableName=TENANT_GROUP_TABLE_NAME)
+        print("Table already exists")
+    except:
+        print("Table not found")
+        client.create_table(
+            AttributeDefinitions=[
+                {
+                    'AttributeName': 'GroupName',
+                    'AttributeType': 'S'
+                }
+            ],
+            TableName=TENANT_GROUP_TABLE_NAME,
+            KeySchema=[
+                {
+                    'AttributeName': 'GroupName',
+                    'KeyType': 'HASH'
+                }
+            ],
+            ProvisionedThroughput={
+                'ReadCapacityUnits': 1,
+                'WriteCapacityUnits': 1
+            }
+        )
+        print("Table created")
+        # Wait until the table exists.
+        client.get_waiter('table_exists').wait(TableName=TENANT_GROUP_TABLE_NAME)
+        # Print out some data about the table.
+        response = client.describe_table(TableName=TENANT_GROUP_TABLE_NAME)
+        print(response)
 
 
-def eventNotificationToQueue(bucketName,queueArn):
+    client.put_item(TableName=TENANT_GROUP_TABLE_NAME,
+                    Item=tenantGroup)
+    
+
+
+def addEventNotificationToQueue(bucketName,queueArn):
     
     response = s3.put_bucket_notification_configuration(
         Bucket=bucketName,
@@ -82,8 +121,8 @@ def defineTenantGroupQueue(queueName):
 # Create a new tenant within a given group: create a prefix under the bucket for the group of tenants
 # 
 if __name__ == '__main__':
-    bucketName,location=defineTenantGroup(GROUP_BUCKET_NAME)
-    queueURL,queueArn=defineTenantGroupQueue(GROUP_BUCKET_NAME)
-    tenantGroup=persistTenantGroup(GROUP_BUCKET_NAME,bucketName,location,queueURL,queueArn)
+    bucketName,location=defineTenantGroup(TENANT_GROUP_NAME)
+    queueURL,queueArn=defineTenantGroupQueue(TENANT_GROUP_NAME)
+    tenantGroup=persistTenantGroup(TENANT_GROUP_NAME,bucketName,location,queueURL,queueArn)
     print(json.dumps(tenantGroup, indent=3))
-    #defineTenantGroupQueue(GROUP_BUCKET_NAME)
+    #addEventNotificationToQueue(bucketName,queueArn)
