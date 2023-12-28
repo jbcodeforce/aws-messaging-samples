@@ -2,9 +2,25 @@
 
 This section is a quick summary from [ActiveMQ Artemis version product documentation](https://activemq.apache.org/components/artemis/documentation/), ActiveMQ [classic documentation](https://activemq.apache.org/components/classic/documentation) and Amazon MQ [ActiveMQ engine documentation](https://docs.aws.amazon.com/amazon-mq/latest/developer-guide/working-with-activemq.html) for Active MQ 5.17.3 deployment as a managed service.
 
-## The Open source
+## [The Open source](https://activemq.apache.org/)
 
-ActiveMQ has two main version of the product Active MQ 5.x (or classic) and Artemis 2.x which supports Jakarta Messsaging 3.1.
+Active MQ is an Open Source software, multi-protocol, java based message broker. ActiveMQ has two main version of the product Active MQ 5.x (or classic) and Artemis 2.x which supports Jakarta Messsaging 3.1. It also supports embedding the broker in a java app.
+
+It supports message load balancing, HA. Multiple connected "master" brokers can dynamically respond to consumer demand by moving messages between the nodes in the background.
+
+Amazon MQ - Active MQ engine supports the Classic version.
+
+Active MQ supports different messaging patterns: **queue** and **topic**:
+
+* Queue supports point to point, and request/replyTo pattern.
+* Queue can have multiple senders and consumers, the message will be load balanced between consumers. Messages acknowledged are removed from the queue.
+* Message with a TTL will be removed from queue, without being consumed.
+
+
+* Topic supports pub/sub.
+* With Topic, receiver starts to receive only the new messages, that are being sent by the sender. Messages sent to topic without consumer are lost.
+* Topics support the fan-out pattern. All Messages sent by any senders are received by all connected receivers.
+
 
 ### Value propositions
 
@@ -24,23 +40,142 @@ ActiveMQ has two main version of the product Active MQ 5.x (or classic) and Arte
 * Complex redelivery policy
 
 
-## Topologies
+### Configurations
+
+A configuration contains all of the settings for the ActiveMQ brokers, in XML format. It is possible to configure users and groups, and then the `authorizationMap` so a specific queue or topic can only be accessed by a specific user/app (The declaration below, allows user1 to manage, write and read from `queue.user1`, but not user2, who is allowed admin, read and write on `topic.user2`): 
+
+```xml
+<authorizationPlugin>
+    <map>
+    <authorizationMap>
+        <authorizationEntries>
+          <authorizationEntry admin="admin,activemq-webconsole" queue="&gt;" read="admin,activemq-webconsole" write="admin,activemq-webconsole"/>
+          <authorizationEntry admin="admin,activemq-webconsole" topic="&gt;" read="admin,activemq-webconsole" write="admin,activemq-webconsole"/>
+          <authorizationEntry admin="admin,user1" queue="queue.user1" read="user1" write="user1"/>
+          <authorizationEntry admin="admin,user2" read="user2" topic="topic.user2" write="user2"/>
+          <authorizationEntry admin="admin,user1,user2" read="admin,user1,user2" topic="ActiveMQ.Advisory.&gt;" write="admin,user1,user2"/>
+        </authorizationEntries>
+        <tempDestinationAuthorizationEntry>
+        <tempDestinationAuthorizationEntry admin="tempDestinationAdmins" read="tempDestinationAdmins" write="tempDestinationAdmins"/>
+        </tempDestinationAuthorizationEntry>
+    </authorizationMap>
+    </map>
+</authorizationPlugin>
+```
+
+In order to apply the modifications done to the broker configuration, the broker must be rebooted. A reboot can be scheduled, and use specific configuration revision to specify which configuration updates to apply.
+
+## [Amazon MQ](https://docs.aws.amazon.com/amazon-mq/latest/developer-guide/welcome.html)
+
+Amazon MQ is a managed message broker for RabbitMQ or ActiveMQ. It runs on EC2 servers, and supports multi-AZs deployment with failover.
+
+We can create brokers via Console ([see this lab](labs/aq-aws-console-lab.md)), using the AWS CLI, SDK or CDK.
+
+As a queueing system, when a message is received and acknowledged by one receiver, it is no longer on the queue, and the next receiver to connect gets the next message on the queue.
+
+Multiple senders can send messages to the same queue, and multiple receivers can receive messages from the same queue. But each message is only delivered to one receiver only.
+
+With topics, a consumer gets messages from when it starts to consume, previous messages will not be seen. Multiple subscribers will get the same message. All the messages sent to the topic, from any sender, are delivered to all receivers.
+
+### Amazon MQ value propositions
+
+* Keep skill investment and code compatibility with existing on-premises applications.
+* Reduce cost.
+* Deployment automation with CloudFormation, deploy in minutes.
+* Reduced operation overhead, including provisioning, updates, monitoring, maintenance, security and troubleshooting.
+* Vertical scaling with EC2 instance size and type.
+* Horizontal scaling through network of brokers.
+* Queues and topics are in one service so we can easily fan out or build durable queue.
+* Both Transient and persistent messages are supported to optimize for durability or performance.
+* Lower latency.
+* Support Lift and shift of existing apps to the cloud, or use an hybrid architecture.
+
+### Performance considerations
+
+* The size of the message determines performance of the broker, above 100k, storage throughput is a limiting factor.
+* With in-memory queue without persistence, Active MQ can reach high throughput. With no message lost goal, it uses persistence with flush at each message, and it will be bound by the I/O capacity of the underlying persistence store, EBS or EFS. `mq.m5.large`.
+* To improve throughput with Amazon MQ, make sure to have consumers processing messaging as fast as, or faster than the producers are pushing messages.
+* With EFS replication, with cluster and HA, throughput will be lower.
+* [Blog: "Measuring the throughput for Amazon MQ using the JMS Benchmark".](https://aws.amazon.com/blogs/compute/measuring-the-throughput-for-amazon-mq-using-the-jms-benchmark/)  
+
+
+### Amazon MQ [Pricing](https://aws.amazon.com/amazon-mq/pricing/)
+
+We pay by the hour of broker time according to the type of EC2 used as broker. The topology also impacts pricing between single, active/standby and cluster.
+
+Storage price is based on GB persisted on EFS in case of cluster, or EBS in case of single instance.
+
+Data transfer pricing applies too:
+
+* For Traffic forwarded between brokers across availability zones in the same region
+* For Traffic cross-region based on EC2 pricing. In region is not charged.
+* For traffic out to the internet.
+
+### Amazon MQ Monitoring
+
+AmazonMQ publishes [utilization metrics for the brokers](https://docs.aws.amazon.com/amazon-mq/latest/developer-guide/security-logging-monitoring.html), such as `CpuUtilization, HeapUsage, NetworkOut`. If we have a configuration with a primary and a secondary broker, we will have independent metrics for each instance.
+
+It also publishes metrics for queues and Topics such as `MemoryUsage, EnqueueCount` (messages published by producers), `DispatchCount` (message delivered to consumers).
+
+![](./images/mq-metrics.png){ width=900 }
+
+**Figure 1: Queue monitoring with metrics**
+
+Using Cloudwatch alarm we can auto scale the consumer based on metrics value.
+
+From the AWS Amazon MQ Broker console, we can access to the Active MQ console and see the queues.
+
+![](./images/mq-console.png){ width=800 }
+
+**Figure 2: Active MQ admin console**
+
+### Maintenance
+
+AWS is responsible of the hardware, OS, engine software update. Maintenance may be scheduled once a week and can take up to 2 hours. Automatic maintenance can be enforced for minor version upgrade.
+
+## Active MQ Topologies
+
+The [Artemis product documentation HA chapter](https://activemq.apache.org/components/artemis/documentation/) gives all the details on the different topologies supported. Here are the important points to remember:
+
+* Use Live/backup node groups when more than two brokers are used.
+* A backup server is owned by only one live server.
+* Two strategies for backing up a server **shared store** and **replication**.
+* When using a **shared store**, both live and backup servers share the same entire data directory using a **shared file system** (SAN).
+
+    ![](./diagrams/amq-shared-st.drawio.png)
+
+    **Figure 3: Active/standby shared storage**
+
+* Only persistent message data will survive failover.
+* With **replication** the data filesystem is not shared, but replicated from live to standby.  At start-up the backup server will first need to synchronize all existing data from the live server, which brings lag. This could be minimized.
+
+    ![](./diagrams/amq-replica.drawio.png)
+
+    **Figure 4: Active/standby replicate storage**
+
+* With replicas when live broker restarts and failbacks, it will replicate data from the backup broker with the most fresh messages.
+* Brokers with replication are part of a cluster. So `broker.xml` needs to include cluster connection. Live | backup brokers are in the same node-group.
+
 
 ### Active Standby
 
-* Active / Standby: this topology uses a pair of brokers, one getting all the connection and traffic, the other in standby, ready to take the traffic in case of failure on active broker. The persistence is supported by a Storage Area Network.
+Active / Standby topology uses a pair of brokers in different Availability Zones. One broker gets all the connection and traffic, the other is in standby, ready to take the traffic in case of failure of the active broker. The persistence is supported by a Storage Area Network.
 
-    ![](./diagrams/amq-efs-2az.drawio.png)
+![](./diagrams/amq-efs-2az.drawio.png)
 
-* Amazon [Elastic File System](https://docs.aws.amazon.com/efs/latest/ug/whatisefs.html) is the serverless file system, used here to persist messages from Active MQ. We can mount the EFS file systems on on-premises data center servers when connected to your Amazon VPC with AWS Direct Connect or AWS VPN.
+**Figure 5: Amazon MQ - Active/standby shared storage**
+
+Amazon [Elastic File System](https://docs.aws.amazon.com/efs/latest/ug/whatisefs.html) is the serverless file system used to persist messages. We can mount the EFS file systems on on-premises data center servers when connected to the Amazon VPC with AWS Direct Connect or AWS VPN.
+
+For an active/standby broker, Amazon MQ provides two ActiveMQ Web Console URLs, but only one URL is active at a time.
 
 #### Hybrid cloud with AWS
-
-Amazon MQ is a managed, highly available message broker for Apache ActiveMQ. The service manages the provisioning, setup, and maintenance of ActiveMQ. 
 
 * During migration to the cloud, we need to support hybrid deployment where existing applications on-premises consume messages from queues or topics defined in Amazon MQ - Active MQ engine. The following diagram illustrates different possible integrations and the deployment of active/standby brokers in 2 availability zones.
 
     ![](./diagrams/on-prem-to-activemq.drawio.png)
+
+    **Figure 6: Hybrid integration with Amazon MQ**
 
     * The on-premises applications or ETL jobs access the active broker, using public internet or private connection with Amazon Direct Connect, or site-to-site VPN.
     * For the public access, the internet gateway routes the traffic to a network load balancer (layer 4 TCP routing), which is also HA (not represented in the figure), to reach the active Broker.
@@ -54,13 +189,55 @@ Amazon MQ is a managed, highly available message broker for Apache ActiveMQ. The
 
 ### Mesh
 
-* Network of brokers with multiple active/standby brokers, like a broker Mesh. This topology is used to increase the number of client applications. There is no single point of failure as in client/server or hub and spoke topologies. A client can failover another broker improving high availability.
+We can choose a network of brokers with multiple active/standby brokers, like a broker Mesh. This topology is used to increase the number of client applications. Any one of the two Active/Stanby brokers can be active at a time with messages stored in a **shared durable storage**.. There is no single point of failure as in client/server or hub and spoke topologies. A client can failover another broker improving high availability. 
 
-    ![](./diagrams/mq-mesh.drawio.png)
+The following diagram illustrates a configuration over 3 AZs, and the corresponding [CloudFormation template can be found here](https://s3.amazonaws.com/amazon-mq-workshop/CreateAmazonMQWorkshop.yaml).
 
-* Amazon MQ propose a mesh network of single-instance brokers with non replicated files as they use EBS volume.
+![](./diagrams/mq-mesh.drawio.png)
 
-    ![](./diagrams/mq-mesh-single.drawio.png)
+**Figure 7: Amazon MQ cluster deployment**
+
+Each broker can accept connections from clients. The client endpoints are named `TransportConnectors`. Any client connecting to a broker uses a failover string that defines each broker that the client can connect to send or receive messages.
+
+```sh
+amqp+ssl://b-5......87c1e-1.mq.us-west-2.amazonaws.com:5671
+amqp+ssl://b-5......87c1e-2.mq.us-west-2.amazonaws.com:5671
+```
+
+In order to scale, client connections can be divided across brokers. 
+
+Because those brokers are all connected using network connectors, when a producer sends messages to say NoB1, the messages can be consumed from NoB2 or from NoB3. This is because `conduitSubscriptions` is set to false.
+
+Essentially we send messages to any brokers, and the messages can still be read from a different brokers.
+
+Amazon MQ proposes a mesh network of single-instance brokers with non shated files as each broker uses EBS volume.
+
+![](./diagrams/mq-mesh-single.drawio.png)
+
+**Figure 8: Amazon MQ broker mesh cluster deployment**
+
+Brokers are connected with each other using `OpenWire` network connectors. Within each broker configuration, for each queue and topic, there are a set of `networkConnector` items defining connection from the current broker and to the two other brokers in the mesh. So each broker has a different networkConnector, to pair to each other broker.
+
+```xml
+  <networkConnectors>
+    <networkConnector conduitSubscriptions="false" consumerTTL="1" messageTTL="-1" name="QueueConnector_ConnectingBroker_1_To_2" uri="masterslave:(ssl://b-c2....2-1.mq.us-west-2.amazonaws.com:61617,ssl://b-c2...2-2.mq.us-west-2.amazonaws.com:61617)" userName="mqadmin">
+      <excludedDestinations>
+        <topic physicalName="&gt;"/>
+      </excludedDestinations>
+    </networkConnector>
+    <networkConnector conduitSubscriptions="false" consumerTTL="1" messageTTL="-1" name="QueueConnector_ConnectingBroker_1_To_3" uri="masterslave:(ssl://b-ad...647-1.mq.us-west-2.amazonaws.com:61617,ssl://b-ad...d747-2.mq.us-west-2.amazonaws.com:61617)" userName="mqadmin">
+      <excludedDestinations>
+        <topic physicalName="&gt;"/>
+      </excludedDestinations>
+    </networkConnector>
+```
+
+The messages do not flow to other brokers if no consumer is available.
+
+The duplex attribute on `networkConnector` essentially establishes a two-way connection on the same port. This would be useful when network connections are traversing a firewall and is common in *Hub and Spoke* broker topology. In a Mesh topology, it is recommended to use explicit unidirectional networkConnector as it allows flexibility to include or exclude destinations.
+
+Because these brokers are all connected using network connectors, when a producer sends messages to say NoB1, the messages can be consumed from NoB2 or from NoB3.
+
 
 ### Hub and Spoke
 
@@ -74,10 +251,20 @@ In the Amazon MQ, the primary AWS resources are the Amazon MQ message broker and
 
 ### Security considerations
 
-Active MQ is coming with its own way to define access control to Queue, Topics and Brokers. Amazon MQ uses IAM for creating, updating, and deleting operations on the message broker or configuration, and native ActiveMQ authentication for connection to brokers. The following figure illustrates those security contexts:
+Active MQ is coming with its own way to define access control to Queue, Topics and Brokers. 
 
+* Access to AWS Console and Specific engine console to administrators.
+* Encryption in transit via TLS.
+* Encryption at rest using KMS: when creating the broker, we can select the KMS key to use to encrypt data.
+* VPC support for brokers isolation and applications isolation.
+* Security groups for firewall based rules.
+* Queue/topic authentication and authorization using Configuration declarations.
+* Integrated with CloudTrail for Amazon MQ API auditing.
+* User accesses can be defined in an external LDAP, used for management Console access or for service accounts. Apps identifications are done inside the broker configuration.
 
-![](https://jbcodeforce.github.io/aws-studies/infra/diagrams/messaging/amq-sec-users.drawio.png)
+Amazon MQ uses IAM for creating, updating, and deleting operations on the message broker or configuration, and native ActiveMQ authentication for connection to brokers. The following figure illustrates those security contexts:
+
+![](./diagrams/amq-sec-users.drawio.png)
 
 We define three users: 
 
@@ -151,7 +338,7 @@ Once deployed there are 5 differents end points to support the different protoco
 * MQTT – mqtt+ssl:// xxxxxxx.xxx.com:8883
 * WSS – wss:// xxxxxxx.xxx.com:61619
 
-Dec 2023, Amazon MQ doesn't support Mutual Transport Layer Security (mTLS) authentication.
+As of Dec 2023, Amazon MQ doesn't support Mutual Transport Layer Security (mTLS) authentication.
 
 In active/standby deployment, any one of the brokers can be active at a time. Any client connecting to a broker uses a failover string that defines each broker that the client can connect to.
 
@@ -191,24 +378,6 @@ failover:(ssl://b-9f69...f-1.mq.us-west-2.amazonaws.com:61617,ssl://b-9f69...f-2
 
 The networkConnector in each broker configuration links each broker per pair, and messages flow between brokers using `networkConnectors` only when a consumer demands them. The messages do not flow to other brokers if no consumer is available.
 
-## Server configuration HA and Failover
-
-The [Artemis product documentation HA chapter](https://activemq.apache.org/components/artemis/documentation/) gives all the details on the different topologies supported. Here are the important points to remember:
-
-* Use Live/backup node groups when more than two brokers are used.
-* A backup server is owned by only one live server.
-* Two strategies for backing up a server **shared store** and **replication**.
-* When using a **shared store**, both live and backup servers share the same entire data directory using a **shared file system** (SAN).
-
-    ![](./diagrams/amq-shared-st.drawio.png)
-
-* Only persistent message data will survive failover.
-* With **replication** the data filesystem is not shared, but replicated from live to standby.  At start-up the backup server will first need to synchronize all existing data from the live server, which brings lag. This could be minimized.
-
-    ![](./diagrams/amq-replica.drawio.png)
-
-* With replicas when live broker restarts and failbacks, it will replicate data from the backup broker with the most fresh messages.
-* Brokers with replication are part of a cluster. So `broker.xml` needs to include cluster connection. Live | backup brokers are in the same node-group.
 
 ## Storage
 
@@ -319,5 +488,11 @@ Most of those questions are related to the Open source version, but some to Amaz
 ## Good source of informations
 
 * [Amazon MQ - Active MQ product doc](https://docs.aws.amazon.com/amazon-mq/latest/developer-guide/working-with-activemq.html)
-* [My own summary of Amazon MQ](https://jbcodeforce.github.io/aws-studies/infra/messaging/#amazon-mq)
+* [AWS Active MQ Workshop](https://catalog.us-east-1.prod.workshops.aws/workshops/0b534eb9-fdfb-49f0-8df4-ebccca71a9eb/en-US)
+* [git amazon-mq-workshop](https://github.com/aws-samples/amazon-mq-workshop.git)
+* [Create broker AWS CLI command.](https://awscli.amazonaws.com/v2/documentation/api/latest/reference/mq/create-broker.html)
+* [Amazon MQ CLI](https://github.com/antonwierenga/amazonmq-cli).
 * [Using Amazon MQ as an event source for AWS Lambda](https://aws.amazon.com/blogs/compute/using-amazon-mq-as-an-event-source-for-aws-lambda/)
+* [Implementing enterprise integration patterns with AWS messaging services: point-to-point channels.](https://aws.amazon.com/blogs/compute/implementing-enterprise-integration-patterns-with-aws-messaging-services-point-to-point-channels/)
+* [CloudFormation template from the MQ Workshop](https://s3.amazonaws.com/amazon-mq-workshop/CreateAmazonMQWorkshop.yaml).
+* [How do I troubleshoot Amazon MQ broker connection issues?](https://repost.aws/knowledge-center/mq-broker-connection-issues).

@@ -18,7 +18,7 @@ def loadTenant(keyName):
     return tg['Item']
 
 """
-Create a tenant belonging to a group. From now the demo is scoped per region.
+Create a tenant belonging to a group. The demo is scoped per region.
 """   
 def createTenant(tenantName,tenantGroupInfo):
     creationDate = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -72,22 +72,6 @@ def persistToDatabase(tenant):
     dynamodb.put_item(TableName=TENANTS_TABLE_NAME,
                     Item=tenant)
     
-
-
-def eventNotificationToQueue(bucketName,queueArn):
-    
-    response = s3.put_bucket_notification_configuration(
-        Bucket=bucketName,
-        NotificationConfiguration= {
-            'QueueConfigurations': [
-            {
-                'QueueArn': queueArn,
-                'Events': [
-                    's3:ObjectCreated:*'|'s3:ObjectRemoved:*'|'s3:ObjectRestore:*'| 's3:Replication:*'|'s3:LifecycleTransition'|'s3:IntelligentTiering'|'s3:ObjectAcl:Put'|'s3:LifecycleExpiration:*'|'s3:LifecycleExpiration:Delete'|'s3:LifecycleExpiration:DeleteMarkerCreated'|'s3:ObjectTagging:*',
-                ]
-            },
-        ]})
-    print(response)
 
 
 def eventNotificationPerTenantViaSQS(tenantName,bucketName,queueArn):

@@ -5,6 +5,8 @@ nav:
   - Introduction: index.md
   - Active MQ: activemq.md
   - Amazon SQS: sqs.md
+  - Amazon SNS: sns.md
+  - Rabbit MQ: rabbitmq.md
   - Labs:
     - Active MQ:
       - Via AWS Console: labs/aq-aws-console-lab.md
@@ -18,7 +20,6 @@ nav:
       - S3-multi-tenant-event: labs/sqs/s3-tenants-async-processing.md
     - Artemis JMS Req-ReplyTo: req-reply-jms.md
     - IBM MQ labs: labs/ibm-mq.md
-  - Amazon MQ notes: https://jbcodeforce.github.io/ska/infra/messaging/#amazon-mq
 theme: 
   name: material
   palette:
