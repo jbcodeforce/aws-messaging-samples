@@ -1,17 +1,19 @@
 import boto3,os,datetime,json
+import sys,getopt
 
 TENANT_GROUP_NAME="tenant-group-1"
 TENANT_GROUP_TABLE_NAME="TenantGroups"
 ACCOUNT = os.environ.get('AWS_ACCOUNT_ID')
-REGION = os.environ.get('AWS_DEFAULT_REGION')
+REGION = os.environ.get('AWS_DEFAULT_REGION',"us-west-2")
 
 s3 = boto3.client('s3')
 
-# create s3 bucket
-def defineTenantGroup(bucketName):
+# create s3 bucket if not exists
+def defineS3bucketForTenantGroup(bucketName):
     uniqueName=ACCOUNT+ "-" +bucketName
     try:
         bucket = s3.head_bucket(Bucket=uniqueName,ExpectedBucketOwner=ACCOUNT)
+        print("Bucket already exists")
     except:
         print("Bucket not found")
         bucket = s3.create_bucket(Bucket=uniqueName,
@@ -36,6 +38,9 @@ def persistTenantGroup(groupName, bucketName, location, queueURL, queueArn):
     return groupTenant
 
 
+'''
+Persist to the Dynamodb table, and create the table if it does not exist.
+'''
 def persistToDatabase(tenantGroup):
     client = boto3.client('dynamodb')
     # create dynamodb table if not exists
@@ -75,35 +80,56 @@ def persistToDatabase(tenantGroup):
                     Item=tenantGroup)
     
 
-
+'''
+Add a S3 event notification to target the queue if it does not exist.
+'''
 def addEventNotificationToQueue(bucketName,queueArn):
-    
-    response = s3.put_bucket_notification_configuration(
-        Bucket=bucketName,
-        NotificationConfiguration= {
-            'QueueConfigurations': [
-            {
-                'QueueArn': queueArn,
-                'Events': [
-                    's3:ObjectCreated:*'|'s3:ObjectRemoved:*'|'s3:ObjectRestore:*'| 's3:Replication:*'|'s3:LifecycleTransition'|'s3:IntelligentTiering'|'s3:ObjectAcl:Put'|'s3:LifecycleExpiration:*'|'s3:LifecycleExpiration:Delete'|'s3:LifecycleExpiration:DeleteMarkerCreated'|'s3:ObjectTagging:*',
-                ]
-            },
-        ]})
-    print(response)
+    print("Adding event notification to " + bucketName + " bucket, with target queue: " + queueArn)
+    response=s3.get_bucket_notification_configuration(Bucket=bucketName)
+    found=False
+    for config in response['QueueConfigurations']:
+        if config['QueueArn'] == queueArn:
+            print("Bucket already has event notification for this queue")
+            found=True
+    if not found:
+        print("Bucket does not have event notification")
+        s3.put_bucket_notification_configuration(
+                    Bucket=bucketName,
+                    NotificationConfiguration={
+                        'QueueConfigurations': [
+                            {
+                                'QueueArn': queueArn,
+                                'Events': [
+                                    's3:ObjectCreated:*','s3:ObjectRemoved:*'
+                                ],
+                            }
+                        ]
+                    },)
 
 
-# create sqs queue
-def defineTenantGroupQueue(queueName):
+
+# create sqs queue if does not exist, returns queue URL and queue ARN
+def defineTenantGroupQueue(queueName,bucketName):
     sqs = boto3.client('sqs')
     try:
-
         response = sqs.get_queue_url(
                     QueueName=queueName,
                     QueueOwnerAWSAccountId=ACCOUNT
                 )
+        print("Queue exists")
     except sqs.exceptions.QueueDoesNotExist:
         print("Queue not found")
-        response = sqs.create_queue(
+        response = createQueue(sqs)
+        
+    queueURL = response['QueueUrl']
+    queueArn = sqs.get_queue_attributes(
+                        QueueUrl=queueURL,
+                        AttributeNames=['QueueArn'])['Attributes']['QueueArn']
+    return queueURL,queueArn
+
+
+def createQueue(sqs):
+    response = sqs.create_queue(
                     QueueName=queueName,
                     Attributes={
                         'DelaySeconds': '60',
@@ -113,16 +139,59 @@ def defineTenantGroupQueue(queueName):
     queueURL = response['QueueUrl']
     queueArn = sqs.get_queue_attributes(
                         QueueUrl=queueURL,
-                        AttributeNames=['QueueArn'])
-    return queueURL,queueArn['Attributes']['QueueArn']
+                        AttributeNames=['QueueArn'])['Attributes']['QueueArn']
+    policy = {
+        "Version": "2012-10-17",
+        "Statement": [
+            {
+                "Sid": "allow-s3",
+                "Effect": "Allow",
+                "Action": "sqs:SendMessage",
+                "Principal": {
+                     "Service": "s3.amazonaws.com"
+                },
+                "Resource": queueArn,
+            }
+        ]
+    }
+
+    
+    sqs.set_queue_attributes(
+        QueueUrl=queueURL,
+        Attributes={
+            'Policy': json.dumps(policy)
+        }
+    )
+    return response
+    
 
 
 
-# Create a new tenant within a given group: create a prefix under the bucket for the group of tenants
+def usage():
+    print("Usage: python createGroupTenant.py [-h | --help] [ -g tenant-group-name ]")
+    print("Example: python createGroupTenant.py tenant-group-1")
+    sys.exit(1)
+
+def processArguments():
+    try:
+        opts, args = getopt.getopt(sys.argv[1:], "hg", ["help","tenant_group"])
+    except getopt.GetoptError as err:
+        usage()
+    
+    for opt, arg in opts:
+        if opt in ("-h", "--help"):
+            usage()
+        elif opt in ("-g", "--tenant_group"):
+            TENANT_GROUP_NAME = arg
+
+# Create a new tenant group, with one matching SQS queue
 # 
 if __name__ == '__main__':
-    bucketName,location=defineTenantGroup(TENANT_GROUP_NAME)
-    queueURL,queueArn=defineTenantGroupQueue(TENANT_GROUP_NAME)
+    processArguments()
+    bucketName,location=defineS3bucketForTenantGroup(TENANT_GROUP_NAME)
+    queueURL,queueArn=defineTenantGroupQueue(TENANT_GROUP_NAME,bucketName)
+
+    addEventNotificationToQueue(bucketName,queueArn)
     tenantGroup=persistTenantGroup(TENANT_GROUP_NAME,bucketName,location,queueURL,queueArn)
     print(json.dumps(tenantGroup, indent=3))
-    #addEventNotificationToQueue(bucketName,queueArn)
+    

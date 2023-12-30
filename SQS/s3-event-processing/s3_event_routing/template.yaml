@@ -1,0 +1,47 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  s3_event_routing
+  Process S3 Event Notification
+
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Function:
+    Timeout: 3
+    Tracing: Active
+Resources:
+  EventProcessingFunction:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      CodeUri: processEvent/
+      Handler: app.lambda_handler
+      Runtime: python3.11
+      Architectures:
+      - arm64
+      Events:
+        SQSS3Event:
+          Type: SQS 
+          Properties:
+            Queue: arn:aws:sqs:us-west-2:${}:tenant-group-1
+            BatchSize: 5
+
+  ApplicationResourceGroup:
+    Type: AWS::ResourceGroups::Group
+    Properties:
+      Name:
+        Fn::Sub: ApplicationInsights-SAM-${AWS::StackName}
+      ResourceQuery:
+        Type: CLOUDFORMATION_STACK_1_0
+  ApplicationInsightsMonitoring:
+    Type: AWS::ApplicationInsights::Application
+    Properties:
+      ResourceGroupName:
+        Ref: ApplicationResourceGroup
+      AutoConfigurationEnabled: 'true'
+Outputs:
+  EventProcessingFunction:
+    Description: S3 Event Notification processing Lambda Function ARN
+    Value: !GetAtt EventProcessingFunction.Arn
+  EventProcessingFunctionIamRole:
+    Description: Implicit IAM Role created for the function
+    Value: !GetAtt EventProcessingFunctionRole.Arn
