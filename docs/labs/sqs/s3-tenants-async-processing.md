@@ -252,6 +252,7 @@ def eventNotificationPerTenantViaLambda(tenantName,bucketName,functionArn):
 
 Obviously we can bypass the front-end queue, and all the SQS queues if we want to be more synchronous. Except that the S3 Event notification will be posted to an internal queue in the Lambda service. But this queue is transparent to the developer. 
 
+For the Lambda routing implementation, Lambda will automatically deletes the message from the queue if it returns a success status.
 
 
 ### SNS - SQS
