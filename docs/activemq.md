@@ -2,7 +2,7 @@
 
 This section is a quick summary from [ActiveMQ Artemis version product documentation](https://activemq.apache.org/components/artemis/documentation/), ActiveMQ [classic documentation](https://activemq.apache.org/components/classic/documentation) and Amazon MQ [ActiveMQ engine documentation](https://docs.aws.amazon.com/amazon-mq/latest/developer-guide/working-with-activemq.html) for Active MQ 5.17.3 deployment as a managed service.
 
-## [The Open source](https://activemq.apache.org/)
+## [The Open Source project](https://activemq.apache.org/)
 
 Active MQ is an Open Source software, multi-protocol, java based message broker. ActiveMQ has two main version of the product Active MQ 5.x (or classic) and Artemis 2.x which supports Jakarta Messsaging 3.1. It also supports embedding the broker in a java app.
 
@@ -42,7 +42,9 @@ Active MQ supports different messaging patterns: **queue** and **topic**:
 
 ### Configurations
 
-A configuration contains all of the settings for the ActiveMQ brokers, in XML format. It is possible to configure users and groups, and then the `authorizationMap` so a specific queue or topic can only be accessed by a specific user/app (The declaration below, allows user1 to manage, write and read from `queue.user1`, but not user2, who is allowed admin, read and write on `topic.user2`): 
+A configuration contains all of the settings for the ActiveMQ brokers, in XML format. 
+
+It is possible to configure users and groups, and then the `authorizationMap` so a specific queue or topic can only be accessed by a specific user/app (The declaration below, allows user1 to manage, write and read from `queue.user1`, but not user2, who is allowed admin, read and write on `topic.user2`): 
 
 ```xml
 <authorizationPlugin>
@@ -76,6 +78,8 @@ As a queueing system, when a message is received and acknowledged by one receive
 Multiple senders can send messages to the same queue, and multiple receivers can receive messages from the same queue. But each message is only delivered to one receiver only.
 
 With topics, a consumer gets messages from when it starts to consume, previous messages will not be seen. Multiple subscribers will get the same message. All the messages sent to the topic, from any sender, are delivered to all receivers.
+
+The Amazon MQ Configuration is a specific object to manage the configuration of the broker. It can be created before the broker and supports Active MQ [activemq.xml configuration.](https://docs.aws.amazon.com/amazon-mq/latest/developer-guide/amazon-mq-broker-configuration-parameters.html)
 
 ### Amazon MQ value propositions
 
@@ -128,6 +132,8 @@ From the AWS Amazon MQ Broker console, we can access to the Active MQ console an
 ![](./images/mq-console.png){ width=800 }
 
 **Figure 2: Active MQ admin console**
+
+See the [monitoring Lab](./labs/activemq-monitoring.md) for JMX local management, and Amazon MQ monitoring.
 
 ### Maintenance
 
@@ -270,7 +276,7 @@ We define three users:
 
 1. An **IAM administrator** who manages security within an AWS account, specifically IAM users, roles and security policies. This administrator has full access to CloudWatch logs and CloudTrail for API usage auditing. The IAM policy uses action on "mq:" prefix, and possible resources are `broker` and `configuration`. 
 1. An **MQ service administrator**, manages the MQ brokers and configuration via the AWS Console, AWS CLI or APIs. This administrator should be able to define brokers and configurations, networking access controls, security groups, and may be anything related to consumer and producer apps. He/she should have access to CloudWatch Logs and CloudTrail logs too. An administrator needs to signin to amazon api and get the [permissions to act on the broker](https://docs.aws.amazon.com/amazon-mq/latest/developer-guide/security-api-authentication-authorization.html#security-permissions-required-to-create-broker) and the underlying EC2 instances.
-1. Developer defining queue, topics, and get broker URL and credentials. Developer users can be define in external active directory or in broker configuration file.
+1. Developer defining queue, topics, and get broker URL and credentials. Developer users can be defined in external active directory or in broker configuration file.
 
 Amazon MQ management operations like creating, updating and deleting brokers require IAM credentials and are not integrated with LDAP.
 

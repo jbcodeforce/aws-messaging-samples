@@ -1,0 +1,2 @@
+mvn clean package -DskipTests=true
+docker build -t j9r/amq-jms-producer -f src/main/docker/Dockerfile.jvm . 

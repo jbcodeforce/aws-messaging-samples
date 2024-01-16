@@ -1,22 +1,26 @@
 version: '2'
 
 services:
-  active:
-    image:  apache/activemq-classic:latest
-    hostname: active
-    container_name: active
+  activemq:
+    image:  apache/activemq-classic:5.17.6
+    hostname: activemq
+    container_name: activemq
     ports:
       - "8161:8161"
       - "61616:61616"
       - "5672:5672"
+      - "1099:1099"
+      - "38120:38120"
     environment:
-      AMQ_USER: admin
-      AMQ_PASSWORD: adminpassw0rd
-      AMQ_DATA: /tmp/mq/kahadb
-      AMQ_EXTRA_ARGS: "--relax-jolokia"
+      ACTIVEMQ_USER: admin
+      ACTIVEMQ_PASSWORD: adminpassw0rd
+      ACTIVEMQ_DATA: /tmp/mq/kahadb
+      ACTIVEMQ_OPTS: "-Dcom.sun.management.jmxremote.port=38120 -Djava.rmi.server.hostname=$HOSTNAME -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false"
+    
     volumes:
       - ./data:/tmp/mq/kahadb
       - ./config/jetty.xml:/opt/apache-activemq/conf/jetty.xml
+      - ./config/broker-config.xml:/opt/apache-activemq/conf/activemq.xml
     networks:
       - jms-network
 networks:

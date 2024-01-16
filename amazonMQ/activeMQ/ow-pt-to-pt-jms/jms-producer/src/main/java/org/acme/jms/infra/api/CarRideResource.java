@@ -18,7 +18,7 @@ import jakarta.ws.rs.core.Response;
 @Path("/carrides")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
-public class CarRideResource {
+public class QueueResource {
     Logger logger = Logger.getLogger("SimulatorResource");
     
     @Inject
