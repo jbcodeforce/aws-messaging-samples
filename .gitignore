@@ -4,3 +4,4 @@ activeMQ/classic/request-replyto/data/
 **/venv/
 **/.venv/
 **/out.json
+**/data/*
