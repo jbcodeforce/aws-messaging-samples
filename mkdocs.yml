@@ -4,6 +4,7 @@ site_author: Jerome Boyer
 nav:
   - Introduction: index.md
   - Active MQ: activemq.md
+  - Amazon MQ: amazonmq.md
   - Amazon SQS: sqs.md
   - Amazon SNS: sns.md
   - Rabbit MQ: rabbitmq.md
