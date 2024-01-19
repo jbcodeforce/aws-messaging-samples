@@ -1,1 +1,1 @@
-# Some basic example on using SQS
+# Some basic examples on using SQS

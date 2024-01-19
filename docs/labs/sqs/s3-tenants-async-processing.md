@@ -222,50 +222,57 @@ The more flexible implementation may use Lambda function as a target to S3 Event
 
 ![](./diagrams/s3-lambda-fanout.drawio.png){ width=750 }
 
-**Figure 6:**
+**Figure 6: Lambda to fanout to http endpoints**
 
 Lambda can scale at thousand of instances in parallel. The solution uses one queue per bucket and one S3 event notification definition.
 
-As an alternate, if the event-driven processing needs to be asynchronous, then we can add queue before each event-driven process:
+When the event-driven processing needs to be asynchronous, then we can add one queue before each event-driven process and the Lambda will send the event to the good queue.
 
 ![](./diagrams/s3-lambda-sqs-fanout.drawio.png){ width=750 }
 
-**Figure 7:**
+**Figure 7: Lambda to fanout to SQS queues**
 
-The Lambda function can be a target of the S3 event notification as illustrated below:
+???- Info "Lambda as a destination to S3 Event Notification"
+    The Lambda function can be a target of the S3 event notification as illustrated below:
 
-```python
-def eventNotificationPerTenantViaLambda(tenantName,bucketName,functionArn):
-    response = s3.put_bucket_notification_configuration(
-        Bucket=bucketName,
-        NotificationConfiguration= {
-          'LambdaFunctionConfigurations': [
-            {
-                'LambdaFunctionArn': functionArn,
-                'Events': [
-                     's3:ObjectCreated:*'|'s3:ObjectRemoved:*'|'s3:ObjectRestore:*'| 's3:Replication:*'|'s3:LifecycleTransition'|'s3:IntelligentTiering'|'s3:ObjectAcl:Put'|'s3:LifecycleExpiration:*'|'s3:LifecycleExpiration:Delete'|'s3:LifecycleExpiration:DeleteMarkerCreated'|'s3:ObjectTagging:*',
-                 ],
-                'Filter': {
-                    'Key': {
-                        'FilterRules': [
-                            {
-                               'Name': 'prefix',
-                                'Value': tenantName + "/raw"
-                            },
-                        ]
+    ```python
+    def eventNotificationPerTenantViaLambda(tenantName,bucketName,functionArn):
+        response = s3.put_bucket_notification_configuration(
+            Bucket=bucketName,
+            NotificationConfiguration= {
+            'LambdaFunctionConfigurations': [
+                {
+                    'LambdaFunctionArn': functionArn,
+                    'Events': [
+                        's3:ObjectCreated:*'|'s3:ObjectRemoved:*'|'s3:ObjectRestore:*'| 's3:Replication:*'|'s3:LifecycleTransition'|'s3:IntelligentTiering'|'s3:ObjectAcl:Put'|'s3:LifecycleExpiration:*'|'s3:LifecycleExpiration:Delete'|'s3:LifecycleExpiration:DeleteMarkerCreated'|'s3:ObjectTagging:*',
+                    ],
+                    'Filter': {
+                        'Key': {
+                            'FilterRules': [
+                                {
+                                'Name': 'prefix',
+                                    'Value': tenantName + "/raw"
+                                },
+                            ]
+                        }
                     }
-                }
+                },
+                ]
             },
-            ]
-        },
-        )
-```
+            )
+    ```
 
-Obviously we can bypass the front-end queue, and all the SQS queues if we want to be more synchronous. Except that the S3 Event notification will be posted to an internal queue in the Lambda service. But this queue is transparent to the developer.
+    Except that the S3 Event notification is posted to an internal queue in the Lambda service. But this queue is transparent to the developer.
 
 For the Lambda routing implementation, Lambda will automatically deletes the message from the queue if it returns a success status.
 
 The pricing model is pay per call, duration and memory used.
+
+See a proof of concept implementation of the following deployment 
+
+![](./diagrams/demo-1-e2e.drawio.png)
+
+with demonstration script in [this folder](https://github.com/jbcodeforce/aws-messaging-study/tree/main/SQS/s3-event-processing).
 
 ### SNS - SQS
 
@@ -277,10 +284,11 @@ The SNS filtering defines the target SQS queue. The event-driven processes get t
 
 ### SQS - Event Bridge
 
-Event Bridge could be a solution if the file processing is exposed with HTTP endpoint. Routing rule will be used to select the target end-point depending of the tenant information. But there is a limit of 2000 rules per event buses, so it may not be a valid solution to address the use case of thousand of tenants.
+Event Bridge could be a solution if the S3 event processing is exposed with HTTP endpoint. Routing rule will be used to select the target end-point depending of the tenant information. But there is a limit of 2000 rules per event bus, so it may not be a valid solution to address the use case of thousand of tenants.
 
 ![](./diagrams/s3-sqs-eb-fanout.drawio.png)
 
+S3 Event Notifications can be sent to the default event bus only. 
 
 ### SQS - MSK
 
@@ -289,57 +297,6 @@ Finally Kafka may be a solution to stream the S3 event notification to it, via a
 ![](./diagrams/s3-sqs-msk-fanout.drawio.png)
 
 It may be more complex to deploy as we need to define a MSK cluster, and Kafka Connect from SQS source connector. The Event-driven processes need to consume from Kafka. Event ordering will be kept. It will scale to hundred of consumers.
-
-## Demonstration script
-
-The demonstration is based on the following combined elements:
-
-### Prerequisites
-
-The following steps illustrate a tenant onboarding process and the files event-driven processing. Most of the code is in Python CDK or SDK so start a virtual environment:
-
-```sh
-python3 -m venv venv
-. venv/bin/activate
-pip install -r requirements.txt
-```
-
-### Demonstration
-
-1. Define environment variables: `export AWS_ACCOUNT_ID=01234567890` and `export AWS_DEFAULT_REGION=us-west-2`
-1. Create a group of tenants named `tenant-group-1`, 
-
-    ```sh
-    python createGroupTenant.py -g tenant-group-1
-    ```
-
-    which will create S3 bucket, a SQS queue, the S3 event notification to target the new queue, the SQS resource policy to authorize S3 to send message to the queue and define a new tenant group record in DynamoDB TenantGroups table.
-
-    ![](./diagrams/tenant-group.drawio.png)
-
-1. Add a tenant, belonging to the `tenant-group-1`, which will create the following elements
-
-    ```sh
-    python createTenant.py -g tenant-group-1 -n tenant-1
-    ```
-
-    
-    ![](./diagrams/tenant-elements.drawio.png)
-
-    which will create:
-
-    * two prefixes to persist file for the tenant: tenant-1/raw/ and tenant-1/silver/.
-    * A SQS queue to receive the S3 event after routing
-    * The Lambda end-point for file processing
-    * The SQS policy to authorize the Lambda function to send message to the new SQS queue, and read them.
-    * Record the new tenant metadata in `Tenants` table in the DynamoDB
-
-
-1. Deploy the Lambda for routing to consume event from the SQS queue. The end to end solution looks like in the following figure:
-
-    ![](./diagrams/demo-1-e2e.drawio.png)
-
-### Cleanup
 
 ## Conclusion
 

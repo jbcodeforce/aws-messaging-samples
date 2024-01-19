@@ -3,10 +3,11 @@
 ???- info "Documentation Updates"
     Author: Jerome Boyer 
 
-    Creation date: September 2023 - Updated 12/30/2023
+    Creation date: September 2023 - Updated 1/19/2024
 
     * 11/23: Add IBM MQ one-way point to point JMS implementation.
     * 12/23: Address an asynchronous implementation for S3 event processing
+    * 1/24: 
 
 This repository includes a set of demonstrations and studies about messaging services in AWS or as Open Source. The services in scope are: Amazon MQ, Amazon SQS, SNS, MSK and Kinesis. 
 
@@ -74,6 +75,7 @@ Some concrete code samples are part of this repository to demonstrate some of th
 * [AMQP Quarkus app point to point - ActiveMQ Artemis release](./amqp-activemq.md)
 * [Infrastructure as Code - VPC stack](./labs/activemq-cdk.md/#common-stack)
 * [Infrastructure as Code - ActiveMQ active/standby topology stack](./labs/activemq-cdk.md/#active_passive)
+* [Process S3 events for multi-tenant bucket with EDA](./labs/sqs/s3-tenants-async-processing.md)
 * [IBM MQ JMS one-way point to point solution](./labs/ibm-mq.md)
 
 ## Messaging related sources of information

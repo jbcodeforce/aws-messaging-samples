@@ -14,13 +14,16 @@ def defineS3bucketForTenantGroup(bucketName):
     try:
         bucket = s3.head_bucket(Bucket=uniqueName,ExpectedBucketOwner=ACCOUNT)
         print("Bucket already exists")
+        location="http://" + uniqueName + ".s3.amazonaws.com/"
     except:
         print("Bucket not found")
         bucket = s3.create_bucket(Bucket=uniqueName,
                     CreateBucketConfiguration={
                         'LocationConstraint': REGION},
                     ObjectLockEnabledForBucket=False)
-    return uniqueName,bucket['ResponseMetadata']['HTTPHeaders']['x-amz-bucket-region']
+        location = bucket['Location']
+    print(json.dumps(bucket, indent=3))
+    return uniqueName,location
 
    
 def persistTenantGroup(groupName, bucketName, location, queueURL, queueArn):
@@ -87,10 +90,12 @@ def addEventNotificationToQueue(bucketName,queueArn):
     print("Adding event notification to " + bucketName + " bucket, with target queue: " + queueArn)
     response=s3.get_bucket_notification_configuration(Bucket=bucketName)
     found=False
-    for config in response['QueueConfigurations']:
-        if config['QueueArn'] == queueArn:
-            print("Bucket already has event notification for this queue")
-            found=True
+    print(json.dumps(response,indent=3))
+    if 'QueueConfigurations' in response:
+        for config in response['QueueConfigurations']:
+            if config['QueueArn'] == queueArn:
+                print("Bucket already has event notification for this queue")
+                found=True
     if not found:
         print("Bucket does not have event notification")
         s3.put_bucket_notification_configuration(
@@ -119,8 +124,8 @@ def defineTenantGroupQueue(queueName,bucketName):
         print("Queue exists")
     except sqs.exceptions.QueueDoesNotExist:
         print("Queue not found")
-        response = createQueue(sqs)
-        
+        response = createQueue(sqs,queueName)
+    print(json.dumps(response,indent=3))
     queueURL = response['QueueUrl']
     queueArn = sqs.get_queue_attributes(
                         QueueUrl=queueURL,
@@ -128,7 +133,7 @@ def defineTenantGroupQueue(queueName,bucketName):
     return queueURL,queueArn
 
 
-def createQueue(sqs):
+def createQueue(sqs,queueName):
     response = sqs.create_queue(
                     QueueName=queueName,
                     Attributes={
@@ -188,7 +193,9 @@ def processArguments():
 # 
 if __name__ == '__main__':
     processArguments()
+    print("---- Creation of the infrastructure for the solution in " + ACCOUNT + " for a group of tenant " + TENANT_GROUP_NAME)
     bucketName,location=defineS3bucketForTenantGroup(TENANT_GROUP_NAME)
+
     queueURL,queueArn=defineTenantGroupQueue(TENANT_GROUP_NAME,bucketName)
 
     addEventNotificationToQueue(bucketName,queueArn)

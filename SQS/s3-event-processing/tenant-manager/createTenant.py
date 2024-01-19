@@ -16,13 +16,17 @@ def loadTenantGroupInformation(keyName):
     return tg['Item']
 
 def loadTenant(keyName):
-    tg = dynamodb.get_item(TableName=TENANTS_TABLE_NAME, Key={'Name': {'S': keyName}})   
-    return tg['Item']
+    assessTenantTableExists(TENANTS_TABLE_NAME)
+    tg = dynamodb.get_item(TableName=TENANTS_TABLE_NAME, Key={'Name': {'S': keyName}})
+    if 'Item' in tg:
+        return tg['Item']
+    return None
 
 """
 Create a tenant belonging to a group. The demo is scoped per region.
 """   
 def getOrCreateTenant(tenantName,tenantGroupInfo):
+    print(" --- Get or Create Tenana ----")
     tenant = loadTenant(tenantName)
     if tenant:
         return tenant
@@ -39,11 +43,9 @@ def getOrCreateTenant(tenantName,tenantGroupInfo):
     persistToDatabase(tenant)
     return tenant
 
-
-def persistToDatabase(tenant):
-    print(tenant)
+def assessTenantTableExists(tableName):
     try:
-        dynamodb.describe_table(TableName=TENANTS_TABLE_NAME)
+        dynamodb.describe_table(TableName=tableName)
         print("Table already exists")
     except:
         print("Table not found")
@@ -54,7 +56,7 @@ def persistToDatabase(tenant):
                     'AttributeType': 'S'
                 }
             ],
-            TableName=TENANTS_TABLE_NAME,
+            TableName=tableName,
             KeySchema=[
                 {
                     'AttributeName': 'Name',
@@ -68,12 +70,12 @@ def persistToDatabase(tenant):
         )
         print("Table created")
         # Wait until the table exists.
-        dynamodb.get_waiter('table_exists').wait(TableName=TENANTS_TABLE_NAME)
+        dynamodb.get_waiter('table_exists').wait(TableName=tableName)
         # Print out some data about the table.
-        response = dynamodb.describe_table(TableName=TENANTS_TABLE_NAME)
+        response = dynamodb.describe_table(TableName=tableName)
         print(response)
 
-
+def persistToDatabase(tenant):
     dynamodb.put_item(TableName=TENANTS_TABLE_NAME,
                     Item=tenant)
     
@@ -95,8 +97,12 @@ def createSQSQueue(queueName):
                         'MessageRetentionPeriod': '86400'
                     }
                 )
-    queueURL = response['QueueUrl']
-    updateQueuePolicy(sqs,queueURL)
+        
+        queueURL = response['QueueUrl']
+        updateQueuePolicy(sqs,queueURL)
+        print("Queue created")
+    
+    
 
         
 
