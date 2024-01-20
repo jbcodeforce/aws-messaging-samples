@@ -8,29 +8,29 @@ REGION = os.environ.get('AWS_DEFAULT_REGION',"us-west-2")
 
 s3 = boto3.client('s3')
 
-# create s3 bucket if not exists
-def defineS3bucketForTenantGroup(bucketName):
-    uniqueName=ACCOUNT+ "-" +bucketName
+# create s3 bucket if not exist
+def defineS3bucketForTenantGroup(account,bucketName,region):
+    uniqueName=account+ "-" +bucketName
     try:
-        bucket = s3.head_bucket(Bucket=uniqueName,ExpectedBucketOwner=ACCOUNT)
+        bucket = s3.head_bucket(Bucket=uniqueName,ExpectedBucketOwner=account)
         print("Bucket already exists")
         location="http://" + uniqueName + ".s3.amazonaws.com/"
     except:
         print("Bucket not found")
         bucket = s3.create_bucket(Bucket=uniqueName,
                     CreateBucketConfiguration={
-                        'LocationConstraint': REGION},
+                        'LocationConstraint': region},
                     ObjectLockEnabledForBucket=False)
         location = bucket['Location']
-    print(json.dumps(bucket, indent=3))
     return uniqueName,location
 
    
-def persistTenantGroup(groupName, bucketName, location, queueURL, queueArn):
+def persistTenantGroup(groupName, bucketName, region, location, queueURL, queueArn):
     creationDate = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     groupTenant = {'GroupName': {'S': groupName}, 
               'BucketName': {'S': bucketName },
-              'Region': {'S': location }, 
+              'Region': {'S': region }, 
+              'Location': {'S': location }, 
               'QueueURL': { 'S': queueURL },
               'QueueArn': {'S': queueArn }, 
               'Status': {'S': 'ACTIVE' }, 
@@ -179,7 +179,7 @@ def usage():
 
 def processArguments():
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "hg", ["help","tenant_group"])
+        opts, args = getopt.getopt(sys.argv[1:], "h:g:", ["help","tenant_group"])
     except getopt.GetoptError as err:
         usage()
     
@@ -188,17 +188,18 @@ def processArguments():
             usage()
         elif opt in ("-g", "--tenant_group"):
             TENANT_GROUP_NAME = arg
+    return TENANT_GROUP_NAME
 
 # Create a new tenant group, with one matching SQS queue
 # 
 if __name__ == '__main__':
-    processArguments()
+    TENANT_GROUP_NAME=processArguments()
     print("---- Creation of the infrastructure for the solution in " + ACCOUNT + " for a group of tenant " + TENANT_GROUP_NAME)
-    bucketName,location=defineS3bucketForTenantGroup(TENANT_GROUP_NAME)
+    bucketName,location=defineS3bucketForTenantGroup(ACCOUNT,TENANT_GROUP_NAME,REGION)
 
     queueURL,queueArn=defineTenantGroupQueue(TENANT_GROUP_NAME,bucketName)
 
     addEventNotificationToQueue(bucketName,queueArn)
-    tenantGroup=persistTenantGroup(TENANT_GROUP_NAME,bucketName,location,queueURL,queueArn)
+    tenantGroup=persistTenantGroup(TENANT_GROUP_NAME,bucketName,REGION,location,queueURL,queueArn)
     print(json.dumps(tenantGroup, indent=3))
     

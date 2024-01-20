@@ -6,7 +6,7 @@ The presentation of the challenge addressed in this proof of concept is done in 
 
 ## Prerequisites
 
-* You should have AWS account, AWS ClI installed, Python 3 environment, AWS CDK and SDK installed on your computer. 
+* You should have AWS account, AWS ClI installed, Python 3 environment, AWS SAM, CDK CLI installed on your computer.
 * Initiate a Python virtual environment under the `aws-messaging-study/SQS/s3-event-processing` folder.
 
 ```sh
@@ -45,16 +45,16 @@ This section demonstrate how a tenant manager application may be able to create 
             "S": "tenant-group-1"
         },
         "BucketName": {
-            "S": "<>-tenant-group-1"
+            "S": "ACCOUNT_ID-tenant-group-1"
         },
         "Region": {
-            "S": "http://<>-tenant-group-1.s3.amazonaws.com/"
+            "S": "http://ACCOUNT_ID-tenant-group-1.s3.amazonaws.com/"
         },
         "QueueURL": {
-            "S": "https://sqs.us-west-2.amazonaws.com/<>/tenant-group-1"
+            "S": "https://sqs.us-west-2.amazonaws.com/ACCOUNT_ID/tenant-group-1"
         },
         "QueueArn": {
-            "S": "arn:aws:sqs:us-west-2:<>:tenant-group-1"
+            "S": "arn:aws:sqs:us-west-2:ACCOUNT_ID:tenant-group-1"
         },
         "Status": {
             "S": "ACTIVE"
@@ -86,18 +86,64 @@ This section demonstrate how a tenant manager application may be able to create 
             "S": "tenant-group-1"
         },
         "RootS3Bucket": {
-            "S": "<>-tenant-group-1"
+            "S": "ACCOUNT_ID-tenant-group-1"
         },
         "BasePrefix": {
             "S": "tenant-1/"
         },
         "Region": {
-            "S": "http://<>-tenant-group-1.s3.amazonaws.com/"
+            "S": "http://ACCOUNT_ID-tenant-group-1.s3.amazonaws.com/"
         },
         "Status": {
             "S": "ACTIVE"
         },
+        "TargetQueueForRawFile": {
+            "S" : "https://sqs.REGION.amazonaws.com/ACCOUNT_ID/tenant-1-raw"
+        }
 
     ```
+1. Add 2 other tenants:
 
-1. Deploy the Lambda for routing to consume events from the first SQS queue and route to the target SQS queue. 
+    ```sh
+    python createTenant.py -g tenant-group-1 -n tenant-2
+    python createTenant.py -g tenant-group-1 -n tenant-3
+    ```
+
+1. Deploy the Lambda for tenant routing to consume events from the first SQS queue and route to the target SQS queue. For that, use the sam cli under the `s3_event_processing` folder.
+
+    ```sh
+    sam build
+    sam validate
+    sam deploy --guided
+    ```
+
+    Here is the resources created via CloudFormation stack:
+
+    ![](https://github.com/jbcodeforce/aws-messaging-study/blob/main/docs/labs/sqs/images/cf-lambdap-dep.png)
+
+    and the deployed function:
+
+    ![](https://github.com/jbcodeforce/aws-messaging-study/blob/main/docs/labs/sqs/images/1-lambda-evt-p.png)
+
+    Any modification of the Lambda code can be redeployed using `sam build && sam ydeploy`.
+
+## Demonstrate end to end processing
+
+1. Write a source file to a tenant raw destination, as it is in the tenant-1-group bucket the S3 Event notification will be propagated to the first SQS queue, the deploy Lambda function will route to the good tenant SQS queue:
+
+    ```sh
+    python writeRawData.py -g tenant-group-1 -n tenant-1
+    python writeRawData.py -g tenant-group-1 -n tenant-2
+    python writeRawData.py -g tenant-group-1 -n tenant-3
+    ```
+
+    The Lambda function is processing the events:
+
+    ![](https://github.com/jbcodeforce/aws-messaging-study/blob/main/docs/labs/sqs/images/lambda-monitoring.png)
+
+
+## Clean up
+
+    ```
+    sam destroy
+    ```

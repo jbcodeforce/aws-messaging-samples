@@ -4,7 +4,7 @@ version = 0.1
 
 [default]
 [default.global.parameters]
-stack_name = "s3_event_routing"
+stack_name = "s3-event-routing"
 
 [default.build.parameters]
 cached = true

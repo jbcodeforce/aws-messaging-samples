@@ -1,10 +1,12 @@
 import json
-import boto3
+import boto3, logging
 
 TENANTS_TABLE_NAME="Tenants"
 
 def lambda_handler(event, context):
+    
     for message in event['Records']:
+        logging.info(json.dumps(message,indent=3))
         process_message(message)
     return {
         "statusCode": 200,
@@ -13,31 +15,41 @@ def lambda_handler(event, context):
         }),
     }
 
-
+'''
+Process S3 event notification.
+'''
 def process_message(message):
     try:
-        s3Notification=message['s3']
-        print(f"Processed message {s3Notification}")
-        bucketName=s3Notification['bucket']['name']
-        print(f"Bucket Name: {bucketName}")
-        objectKey=s3Notification['object']['key']
-        if "/raw/" in objectKey:
-            tenantName=objectKey.split('/')[0]
-            sequencer=s3Notification['object']['sequencer']
-            processEventFromRawFolder(tenantName,sequencer)    
+        if 's3' in message:
+            s3Notification=message['s3']
+            bucketName=s3Notification['bucket']['name']
+            logging.info(f"Tenant Group Bucket Name: {bucketName}")
+            objectKey=s3Notification['object']['key']
+            if "/raw/" in objectKey:
+                tenantName=objectKey.split('/')[0]
+                sequencer=s3Notification['object']['sequencer']
+                processEventFromRawFolder(tenantName,sequencer,objectKey)    
+            else:
+                logging.info("no processing")
         else:
-            print("no processing")
-
+            logging.error("No S3 element in the S3 event notification record")
+            logging.error(message)
     except Exception as err:
-        print("An error occurred")
+        logging.error("An error occurred")
         raise err
 
-def processEventFromRawFolder(tenantName,sequencer):
+'''
+When file in raw prefix, delegate to the downstream processing by sending to the tenant queue
+'''
+def processEventFromRawFolder(tenantName,sequencer,fileName):
     """ Process Event from Raw Folder """
-    print("Processing Event from Raw Folder")
+    logging.info("Processing Event from Raw Folder")
     tenantInfo=lookupTenant(tenantName)
-    targetQueueForRawFile = tenantInfo['Item']['TargetQueueForRawFile']['S']
-    print(tenantInfo)
+    logging.info("--> tenant info from database: \n" + json.dumps(tenantInfo,indent=3))
+    queueUrl = tenantInfo['Item']['TargetQueueForRawFile']
+    message = {"FileToProcess": fileName }
+    sendMessageToDestinationQueue(queueUrl,json.dumps(message),sequencer)
+
 
 def lookupTenant(tenantName):
     """ Lookup Tenant in DynamoDB """
@@ -50,28 +62,10 @@ def lookupTenant(tenantName):
     )
     return response
 
-def s3_notif_event():
-    """ Generates S3 Event Notification"""
+def sendMessageToDestinationQueue(queueURL,message,sequencer):
+    sqs = boto3.client('sqs')
+    response = sqs.send_message(QueueUrl=queueURL,MessageBody=message)
+    logging.info(json.dumps(response,indent=3))
 
-    return {
-         "Records": [ { "s3": {
-                "s3SchemaVersion": "1.0",
-                "configurationId": "YjE1ZDFmNDgtNDdkYy00YTg4LTkwMmUtMDJhNzBlZjc0OGI0",
-                "bucket": {
-                    "name": "tenant-group-1",
-                    "ownerIdentity": {
-                        "principalId": "ASZSZNK23IX0X"
-                    },
-                    "arn": "arn:aws:s3:::tenant-group-1"
-                },
-                "object": {
-                    "key": "tenant-1/raw/tenant.json",
-                    "size": 84,
-                    "eTag": "b9dd11ce5b653aaafd256ec6e742bc13",
-                    "sequencer": "00658F76CC18638712"
-                } 
-         }
-        }]
-    }
 
-lambda_handler(s3_notif_event(), None)
+

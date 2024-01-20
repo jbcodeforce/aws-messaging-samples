@@ -26,16 +26,18 @@ def loadTenant(keyName):
 Create a tenant belonging to a group. The demo is scoped per region.
 """   
 def getOrCreateTenant(tenantName,tenantGroupInfo):
-    print(" --- Get or Create Tenana ----")
+    print(" --- Get or Create Tenant ----")
     tenant = loadTenant(tenantName)
     if tenant:
         return tenant
+    queueURL=getOrCreateSQSQueue(TENANT_NAME+"-raw")
     creationDate = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     tenant = {'Name': {'S': tenantName},
               'GroupName': tenantGroupInfo['GroupName'], 
               'RootS3Bucket':  tenantGroupInfo['BucketName'],
               'BasePrefix': {'S': tenantName + "/"},
               'Region':  tenantGroupInfo['Region'], 
+              'TargetQueueForRawFile': {'S': queueURL },
               'Status': {'S': 'ACTIVE' }, 
               'Created-at': {'S': creationDate }, 
               'Updated-at': {'S': creationDate }  
@@ -80,7 +82,7 @@ def persistToDatabase(tenant):
                     Item=tenant)
     
 
-def createSQSQueue(queueName):
+def getOrCreateSQSQueue(queueName):
     sqs = boto3.client('sqs')
     try:
         response = sqs.get_queue_url(
@@ -88,6 +90,7 @@ def createSQSQueue(queueName):
                     QueueOwnerAWSAccountId=ACCOUNT
                 )
         print("Queue exists")
+        queueURL = response['QueueUrl']
     except sqs.exceptions.QueueDoesNotExist:
         print("Queue not found")
         response = sqs.create_queue(
@@ -101,6 +104,7 @@ def createSQSQueue(queueName):
         queueURL = response['QueueUrl']
         updateQueuePolicy(sqs,queueURL)
         print("Queue created")
+    return queueURL
     
     
 
@@ -132,16 +136,7 @@ def updateQueuePolicy(sqs,queueURL):
     )
     print("Queue policy updated")
 
-def writeToTenantPrefixes(tenant):
-    s3 = boto3.client('s3')
-    tenantName=tenant['Name']['S']
-    tenantInfo = { "name": tenantName,
-                   "group": tenant['GroupName']['S'],
-                   "created-at": tenant['Created-at']['S'] }
-    bucketName=tenant['RootS3Bucket']['S']
-    s3.put_object(Body=json.dumps(tenantInfo), Bucket=bucketName, Key=tenantName + "/raw/" + "tenant.json")
-    print("Tenant information written to " + bucketName + "/" + tenantName + "/raw/" + "tenant.json")
-    s3.put_object(Body=json.dumps(tenantInfo), Bucket=bucketName, Key=tenantName + "/silver/" + "tenant.json")
+
 
 def usage():
     print("Usage: python createTenant.py [-h | --help] [ -g tenant-group-name -n tenant-name ]")
@@ -150,26 +145,28 @@ def usage():
 
 def processArguments():
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "hg", ["help","tenant_group"])
+        opts, args = getopt.getopt(sys.argv[1:], "h:g:n:", ["help","tenant_group","tenant_name"])
     except getopt.GetoptError as err:
         usage()
     
     for opt, arg in opts:
-        if opt in ("-h", "--help"):
+        if opt in ["-h", "--help"]:
             usage()
-        elif opt in ("-g", "--tenant_group"):
+        elif opt in ["-g", "--tenant_group"]:
             TENANT_GROUP_NAME = arg
-        elif opt in ("-n", "--tenant_name"):
+        elif opt in ["-n", "--tenant_name"]:
             TENANT_NAME = arg
+    return TENANT_GROUP_NAME,TENANT_NAME
 
 
-# Create a new tenant within a given group: create a prefix under the bucket for the group of tenants
+#
+# Create a new tenant within a given group: create a prefix under the bucket for raw and silver prefixes
 # 
 if __name__ == '__main__':
-    processArguments()
+    TENANT_GROUP_NAME,TENANT_NAME = processArguments()
+    print(" process " + TENANT_NAME + " to " + TENANT_GROUP_NAME)
     tenantGroup=loadTenantGroupInformation(TENANT_GROUP_NAME)
     print(json.dumps(tenantGroup, indent=3))
     tenant=getOrCreateTenant(TENANT_NAME,tenantGroup)
     print(json.dumps(tenant,indent=3))
-    writeToTenantPrefixes(tenant)
-    createSQSQueue(TENANT_NAME+"-raw")
+  

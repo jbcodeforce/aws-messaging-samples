@@ -5,3 +5,4 @@ activeMQ/classic/request-replyto/data/
 **/.venv/
 **/out.json
 **/data/*
+**/.aws-sam/*

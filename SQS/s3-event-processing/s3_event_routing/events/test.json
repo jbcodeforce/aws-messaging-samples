@@ -1,0 +1,35 @@
+
+            {
+                "eventVersion": "2.1",
+                "eventSource": "aws:s3",
+                "awsRegion": "us-west-2",
+                "eventTime": "2024-01-20T01:55:19.267Z",
+                "eventName": "ObjectCreated:Put",
+                "userIdentity": {
+                    "principalId": "AWS:AROA5P7ZHQ5DPWIB5XRAJ:boyerje-Isengard"
+                },
+                "requestParameters": {
+                    "sourceIPAddress": "73.92.84.253"
+                },
+                "responseElements": {
+                    "x-amz-request-id": "RS6DFWP3K0WFXNRR",
+                    "x-amz-id-2": "TN8ir0a/Iu+6ABG5Ls4V0szwpRUtKfYy48Z6S47cTf30HQRioQ5S39wtg/HgpC6xdQjHuFT+wWM/XWtzJWPs5sqQ6WHqPQ6A"
+                },
+                "s3": {
+                    "s3SchemaVersion": "1.0",
+                    "configurationId": "MTU3NjY4YzQtZWY5YS00MDM4LTk1ZTAtNTgyYzcwNTkwODNl",
+                    "bucket": {
+                        "name": "927698749254-tenant-group-1",
+                        "ownerIdentity": {
+                            "principalId": "ASE416HZXVZV7"
+                        },
+                        "arn": "arn:aws:s3:::927698749254-tenant-group-1"
+                    },
+                    "object": {
+                        "key": "tenant-2/raw/tenant.json",
+                        "size": 84,
+                        "eTag": "af6f4ecceed075fbe4af215967e1d550",
+                        "sequencer": "0065AB2807303B5F2C"
+                    }
+                }
+            }
