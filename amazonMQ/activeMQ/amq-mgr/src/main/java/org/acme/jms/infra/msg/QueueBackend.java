@@ -1,6 +1,7 @@
 package org.acme.jms.infra.msg;
 
 import java.util.ArrayList;
+import java.util.Enumeration;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -13,7 +14,10 @@ import javax.jms.Destination;
 import javax.jms.ExceptionListener;
 import javax.jms.JMSException;
 import javax.jms.Message;
+import javax.jms.MessageConsumer;
 import javax.jms.MessageProducer;
+import javax.jms.Queue;
+import javax.jms.QueueBrowser;
 import javax.jms.Session;
 import javax.jms.TextMessage;
 
@@ -61,6 +65,9 @@ public class QueueBackend implements ExceptionListener {
     private ActiveMQConnection connection = null;
 
     private ScheduledExecutorService reconnectScheduler = null;
+    private MessageProducer producer = null;
+    
+
   
 
     void onStop(@Observes ShutdownEvent ev) {
@@ -198,17 +205,30 @@ public class QueueBackend implements ExceptionListener {
     public boolean moveMessageToDestination(String queue_name, MessageTarget definition) {
         logger.info("Move message: " + definition.messageId + " from " + queue_name);
         Message fromMsg = getMessageFromSource(queue_name,definition.messageId);
-        sendMessageToDestination(fromMsg,definition.destinationName);
-        return true;
+        if (fromMsg != null) {
+            sendMessageToDestination(fromMsg,definition.destinationName);
+            return true;
+        }
+        return false;
       }
 
+
+    /**
+     * 
+     * @param queue_name from which to get the message
+     * @param messageId
+     * @return
+     */
     private Message getMessageFromSource(String queue_name, String messageId) {
         Message fromMsg = null;
         try {
             if (! isConnected()) {
                 restablishConnection();
             }
-            Session session=connection.createSession(true,Session.SESSION_TRANSACTED);
+            Session consumerSession=connection.createSession(true,Session.AUTO_ACKNOWLEDGE);
+            Queue inQueue = consumerSession.createQueue(queue_name);
+            MessageConsumer consumer = consumerSession.createConsumer(inQueue,"MessageID='"+messageId+"'");
+            fromMsg = consumer.receive(1000);
         } catch (JMSException e) {
             e.printStackTrace();
         } finally {
@@ -218,4 +238,69 @@ public class QueueBackend implements ExceptionListener {
     }
 
 
+    private void sendMessageToDestination(Message message, String destinationName) {
+        try {
+            if (! isConnected()) {
+                restablishConnection();
+            }
+            Session session = connection.createSession(true,Session.SESSION_TRANSACTED);
+            Destination destination = session.createQueue(destinationName);
+            producer = session.createProducer(destination);
+            if (message.getJMSMessageID() == null)
+                message.setJMSMessageID(UUID.randomUUID().toString());
+            producer.send(message);
+            session.commit();
+            session.close();
+        } catch (JMSException e) {
+            e.printStackTrace();
+        } finally {
+            disconnect();
+        }  
+    }
+
+    public void sendTextMessageToDestination(String destinationName, String txtMessage){
+        try {
+            if (! isConnected()) {
+                restablishConnection();
+            }
+            Session session = connection.createSession(true,Session.SESSION_TRANSACTED);
+            Destination destination = session.createQueue(destinationName);
+            producer = session.createProducer(destination);
+
+            TextMessage message =  session.createTextMessage(txtMessage);
+            message.setJMSMessageID(UUID.randomUUID().toString());
+            producer.send(message);
+            session.commit();
+            session.close();
+        } catch (JMSException e) {
+            e.printStackTrace();
+        } finally {
+            disconnect();
+        }  
+        
+    }
+
+    public List<MessageTarget> browseQueue(String queue_name) {
+        List<MessageTarget> messages = new ArrayList<MessageTarget>();
+        try {
+            if (! isConnected()) {
+                restablishConnection();
+            }
+            Session session = connection.createSession();
+            Queue destination = session.createQueue(queue_name);
+            QueueBrowser browser = session.createBrowser(destination);
+            Enumeration v = browser.getEnumeration();
+            while (v.hasMoreElements()) {
+                TextMessage msg = (TextMessage)v.nextElement();
+                MessageTarget mt = new MessageTarget(msg.getJMSMessageID(),msg.getText());
+                messages.add(mt);
+            }
+               
+        } catch (JMSException e) {
+            e.printStackTrace();
+        } finally {
+            disconnect();
+        }
+       return messages;
+    }
 }
