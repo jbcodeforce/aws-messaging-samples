@@ -3,7 +3,7 @@ package org.acme.jms.infra.api;
 public class QueueDefinition {
    
     public String name;
-    public boolean persistent = true;
+    public boolean persistent = false;
    
     public QueueDefinition() {
         super();

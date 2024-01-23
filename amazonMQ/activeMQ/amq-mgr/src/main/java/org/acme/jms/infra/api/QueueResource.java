@@ -74,18 +74,4 @@ public class QueueResource {
          
     }
 
-    @POST
-    @Path("/message/{queue_name}/")
-    public Response writeMessageToTheQueue(String queue_name, CarRide carRide){
-        String rideJson;
-        try {
-            rideJson = mapper.writeValueAsString(carRide);
-            queueBackend.sendTextMessageToDestination(queue_name,rideJson);
-        } catch (JsonProcessingException e) {
-            e.printStackTrace();
-            return Response.status(Status.INTERNAL_SERVER_ERROR).build();
-        }
-        
-        return Response.ok().build();
-    }
 }

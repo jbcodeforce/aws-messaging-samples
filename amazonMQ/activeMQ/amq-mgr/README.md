@@ -58,11 +58,11 @@ curl -X 'POST' 'http://localhost:8081/queues' \
 ```
 
 
-* Send a message to a queue using a json payload:
+* Send a message to a queue (`carrides.dlq`) using a json payload:
 
 ```sh
 curl -X 'POST' \
-  'http://localhost:8081/queues/message/carrides.dlq' \
+  'http://localhost:8081/carrides/carrides.dlq' \
   -H 'accept: */*' \
   -H 'Content-Type: application/json' \
   -d '{

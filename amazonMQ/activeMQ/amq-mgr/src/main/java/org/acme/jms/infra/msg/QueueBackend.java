@@ -37,7 +37,7 @@ import jakarta.inject.Inject;
 
 
 /**
- * A bean JMS queue.
+ * The Active MQ backend wrapper to support the exposed REST API.
  */
 @ApplicationScoped
 public class QueueBackend implements ExceptionListener {
@@ -57,7 +57,7 @@ public class QueueBackend implements ExceptionListener {
     private String password;
     
     @Inject
-    @ConfigProperty(name = "app.name", defaultValue = "TestApp")
+    @ConfigProperty(name = "app.name", defaultValue = "amq-mgr")
     public String appName;
 
 
@@ -132,7 +132,7 @@ public class QueueBackend implements ExceptionListener {
 
     @Override
     public void onException(JMSException arg0) {
-        logger.error("JMS Exception occured: " + arg0.getMessage());
+        logger.error("JMS Exception occurred: " + arg0.getMessage());
         disconnect();
         reconnect(reconnectDelay);
     }
@@ -173,7 +173,7 @@ public class QueueBackend implements ExceptionListener {
                 producer.setDeliveryMode(DeliveryMode.PERSISTENT);
             else 
                 producer.setDeliveryMode(DeliveryMode.NON_PERSISTENT);
-            TextMessage message = session.createTextMessage("queue-creation");
+            TextMessage message = session.createTextMessage("queue-created");
             message.setJMSMessageID(UUID.randomUUID().toString().substring(0,10));
             producer.send(message);
             session.commit();
@@ -204,22 +204,6 @@ public class QueueBackend implements ExceptionListener {
 
     public boolean moveMessageToDestination(String queue_name, MessageTarget definition) {
         logger.info("Move message: " + definition.messageId + " from " + queue_name);
-        Message fromMsg = getMessageFromSource(queue_name,definition.messageId);
-        if (fromMsg != null) {
-            sendMessageToDestination(fromMsg,definition.destinationName);
-            return true;
-        }
-        return false;
-      }
-
-
-    /**
-     * 
-     * @param queue_name from which to get the message
-     * @param messageId
-     * @return
-     */
-    private Message getMessageFromSource(String queue_name, String messageId) {
         Message fromMsg = null;
         try {
             if (! isConnected()) {
@@ -227,36 +211,29 @@ public class QueueBackend implements ExceptionListener {
             }
             Session consumerSession=connection.createSession(true,Session.AUTO_ACKNOWLEDGE);
             Queue inQueue = consumerSession.createQueue(queue_name);
-            MessageConsumer consumer = consumerSession.createConsumer(inQueue,"MessageID='"+messageId+"'");
+            MessageConsumer consumer = consumerSession.createConsumer(inQueue,"JMSMessageID='"+definition.messageId+"'");
             fromMsg = consumer.receive(1000);
+            if (fromMsg != null) {
+                Session producerSession = connection.createSession(true,Session.SESSION_TRANSACTED);
+                Destination destination = producerSession.createQueue(definition.destinationName);
+                producer = producerSession.createProducer(destination);
+                producer.send(fromMsg);
+                producerSession.commit();
+                fromMsg.acknowledge();
+                producerSession.close();
+            }
+            consumerSession.close();
+           
         } catch (JMSException e) {
             e.printStackTrace();
+            disconnect();
+            return false;
         } finally {
             disconnect();
         }
-        return fromMsg;
-    }
+        return true;
+      }
 
-
-    private void sendMessageToDestination(Message message, String destinationName) {
-        try {
-            if (! isConnected()) {
-                restablishConnection();
-            }
-            Session session = connection.createSession(true,Session.SESSION_TRANSACTED);
-            Destination destination = session.createQueue(destinationName);
-            producer = session.createProducer(destination);
-            if (message.getJMSMessageID() == null)
-                message.setJMSMessageID(UUID.randomUUID().toString());
-            producer.send(message);
-            session.commit();
-            session.close();
-        } catch (JMSException e) {
-            e.printStackTrace();
-        } finally {
-            disconnect();
-        }  
-    }
 
     public void sendTextMessageToDestination(String destinationName, String txtMessage){
         try {
