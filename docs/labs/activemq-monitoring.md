@@ -61,4 +61,6 @@ In case it is not suffisant we can develop a simple WebApp that exposes some bas
 
 This administration application can be deployed as a serverless on Amazon ECS Fargate, within the same VPC as the Amazon MQ brokers. The implementations of the mapper between REST api and Active MQ can use JMS, AMQ API and Amazon SDK.
 
-See code samples in the [amq-mgr folder](https://github.com/jbcodeforce/aws-messaging-study/blob/main/amazonMQ/activeMQ/)
+![](./diagrams/amq-mgr.drawio.png)
+
+See code sample in the [amq-mgr folder](https://github.com/jbcodeforce/aws-messaging-study/blob/main/amazonMQ/activeMQ/) with explanation on how to run it locally, and deploy it to AWS VPC.

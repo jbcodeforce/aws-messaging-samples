@@ -276,11 +276,18 @@ with demonstration script in [this folder](https://github.com/jbcodeforce/aws-me
 
 ### SNS - SQS
 
-In many Fanout use cases, one of the solution is to combine SNS with SQS. The S3 event notification target is now a SNS topic.
+In many Fanout use cases, one of the solution is to combine SNS with SQS. The S3 event notification target is now a SNS topic.  S3 Event notifications are pushed once in a SNS Service, and the SQS queues are subscribers to the topic and then get the messages.
 
 ![](./diagrams/s3-sns-sqs-fanout.drawio.png)
 
-The SNS filtering defines the target SQS queue. The event-driven processes get their tenant based workload.
+
+The advantages
+
+* Fully decoupled with no data loss as SQS will always listen to SNS topic.
+* SQS adds data persistence, delayed processing and retries of work.
+* Increase the number of subscriber over time.
+* Can use Message Filtering using a JSON policy.
+* Can be used for cross-region delivery, with a SQS queue in another region.
 
 ### SQS - Event Bridge
 
@@ -292,14 +299,15 @@ S3 Event Notifications can be sent to the default event bus only.
 
 ### SQS - MSK
 
-Finally Kafka may be a solution to stream the S3 event notification to it, via a queue. The interest will be to be able to replay the events.
+Finally Kafka may be a solution to stream the S3 event notification to it, via a queue. The interest will be to be able to replay the events and really embrace an event-driven architecture where any consumers may come to consume messages and use an event-sourcing pattern.
 
 ![](./diagrams/s3-sqs-msk-fanout.drawio.png)
 
-It may be more complex to deploy as we need to define a MSK cluster, and Kafka Connect from SQS source connector. The Event-driven processes need to consume from Kafka. Event ordering will be kept. It will scale to hundred of consumers.
+It may be more complex to deploy as we need to define a MSK cluster, and Kafka Connect - SQS source connector. The Event-driven processes need to consume from Kafka. Event ordering will be kept. It will scale to thousand of consumers.
 
 ## Conclusion
 
+For a cost perspective scale to zero is important, and do not have computers waiting for events to come is interesting. The Lambda with SQS queues seems the most appropriate method to address the multi-tenant at scale requirements of this solution. As an alternate approach, using a long term strategy of doing an event-driven architecture then Kafka based solution will be a better choice. 
 
 ## Sources of information
 

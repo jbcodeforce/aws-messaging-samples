@@ -161,7 +161,7 @@ public class OrderMessageParticipantProcessor implements MessageListener, Except
             String orderJson= mapper.writeValueAsString(om);
             sendResponse(rawMsg, orderJson);
             msg.acknowledge();
-            logger.info("Reponse sent to replyTo queue " + orderJson);
+            logger.info("Response sent to replyTo queue " + orderJson);
         } catch (JsonProcessingException e) {
             e.printStackTrace();
         } catch ( JMSException e) {
@@ -180,7 +180,7 @@ public class OrderMessageParticipantProcessor implements MessageListener, Except
 
     @Override
     public void onException(JMSException arg0) {
-        logger.error("JMS Exception occured: " + arg0.getMessage());
+        logger.error("JMS Exception occurred: " + arg0.getMessage());
         disconnect();
         reconnect(reconnectDelay);
     }
