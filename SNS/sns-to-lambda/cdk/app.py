@@ -3,11 +3,11 @@ import os
 
 import aws_cdk as cdk
 
-from s3_sqs_fanout.s3_sqs_fanout_stack import S3SqsFanoutStack
+from s3_sns.s3_sns_stack import S3NotifToSnsStack
 
 
 app = cdk.App()
-S3SqsFanoutStack(app, "S3SqsFanoutStack",
+S3NotifToSnsStack(app, "S3EvtNotifToSnsStack",
    env=cdk.Environment(account=os.getenv('CDK_DEFAULT_ACCOUNT'), region=os.getenv('CDK_DEFAULT_REGION')),
     )
 

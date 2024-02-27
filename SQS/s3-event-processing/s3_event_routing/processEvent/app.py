@@ -1,10 +1,12 @@
 import json
 import boto3, logging
 
+# following code will be part of cold start
 TENANTS_TABLE_NAME="Tenants"
+sqs = boto3.client('sqs')
+dynamodb = boto3.resource('dynamodb')
 
 def lambda_handler(event, context):
-    
     for message in event['Records']:
         logging.info(json.dumps(message,indent=3))
         process_message(message)
@@ -53,7 +55,6 @@ def processEventFromRawFolder(tenantName,sequencer,fileName):
 
 def lookupTenant(tenantName):
     """ Lookup Tenant in DynamoDB """
-    dynamodb = boto3.resource('dynamodb')
     table = dynamodb.Table(TENANTS_TABLE_NAME)
     response = table.get_item(
         Key={
@@ -63,7 +64,6 @@ def lookupTenant(tenantName):
     return response
 
 def sendMessageToDestinationQueue(queueURL,message,sequencer):
-    sqs = boto3.client('sqs')
     response = sqs.send_message(QueueUrl=queueURL,MessageBody=message)
     logging.info(json.dumps(response,indent=3))
 

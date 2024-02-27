@@ -1,5 +1,12 @@
 # [SQS: Standard queue](https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/welcome.html)
 
+???- info "Document information"
+    Created Oct 2022 - Updated 02/2024
+
+???- info "Amazon SQS elevator pitch"
+    Amazon SQS is a fully managed message queuing service that enables you to decouple and scale microservices, distributed systems, and serverless applications. Amazon SQS eliminates the complexity and overhead associated with managing and operating message-oriented middleware and empowers developers to focus on differentiating work. Using Amazon SQS, you can send, store, and receive messages between software components at any volume, without losing messages or requiring other services to be available.
+
+
 ## Basic concepts
 
 * Oldest queueing service on AWS. Full managed service.
@@ -27,6 +34,7 @@ Message has metadata out of the box. After a message is polled by a consumer, it
  ![Metadata](./images/sqs/sqs-msg.png){ width=600 }
 
 **Figure 2: Messsage over SQS Metadata**
+
 
 ## Fan-out pattern
 

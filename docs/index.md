@@ -1,13 +1,13 @@
 # Amazon messaging studies
 
 ???- info "Documentation Updates"
-    Author: Jerome Boyer 
+    Author: Jerome Boyer
 
     Creation date: September 2023 - Updated 1/19/2024
 
     * 11/23: Add IBM MQ one-way point to point JMS implementation.
     * 12/23: Address an asynchronous implementation for S3 event processing
-    * 1/24: 
+    * 1/24: Update SQS
 
 This repository includes a set of demonstrations and studies about messaging services in AWS or as Open Source. The services in scope are: Amazon MQ, Amazon SQS, SNS, MSK and Kinesis. 
 

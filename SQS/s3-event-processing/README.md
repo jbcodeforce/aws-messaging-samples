@@ -102,6 +102,7 @@ This section demonstrate how a tenant manager application may be able to create 
         }
 
     ```
+
 1. Add 2 other tenants:
 
     ```sh
@@ -109,7 +110,7 @@ This section demonstrate how a tenant manager application may be able to create 
     python createTenant.py -g tenant-group-1 -n tenant-3
     ```
 
-1. Deploy the Lambda for tenant routing to consume events from the first SQS queue and route to the target SQS queue. For that, use the sam cli under the `s3_event_processing` folder.
+1. Deploy the Lambda for tenant event routing to consume events from the first SQS queue and route to the target SQS queue. For that, use the sam cli under the `s3_event_processing` folder.
 
     ```sh
     sam build
@@ -125,11 +126,11 @@ This section demonstrate how a tenant manager application may be able to create 
 
     ![](https://github.com/jbcodeforce/aws-messaging-study/blob/main/docs/labs/sqs/images/1-lambda-evt-p.png)
 
-    Any modification of the Lambda code can be redeployed using `sam build && sam ydeploy`.
+    Any modification of the Lambda code can be redeployed using `sam build && sam deploy`.
 
 ## Demonstrate end to end processing
 
-1. Write a source file to a tenant raw destination, as it is in the tenant-1-group bucket the S3 Event notification will be propagated to the first SQS queue, the deploy Lambda function will route to the good tenant SQS queue:
+1. Write a source file to a tenant raw destination, as it is in the tenant-1-group bucket the S3 Event notification will be propagated to the first SQS queue, the deployed Lambda function will route to the good tenant SQS queue:
 
     ```sh
     python writeRawData.py -g tenant-group-1 -n tenant-1

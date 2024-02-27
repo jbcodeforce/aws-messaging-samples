@@ -29,7 +29,8 @@ def writeToTenantPrefix(account,tenant_group,tenantName):
     tenantInfo = { "name": tenantName,
                    "group": tenant_group,
                    "created-at":  datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
-    bucketName=account+ "-" + tenant_group
+    #bucketName=account+ "-" + tenant_group
+    bucketName=tenant_group
     s3.put_object(Body=json.dumps(tenantInfo), Bucket=bucketName, Key=tenantName + "/raw/" + "tenant.json")
     print("Tenant information written to " + bucketName + "/" + tenantName + "/raw/" + "tenant.json")
     

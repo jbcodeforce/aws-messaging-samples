@@ -190,7 +190,9 @@ def processArguments():
             TENANT_GROUP_NAME = arg
     return TENANT_GROUP_NAME
 
-# Create a new tenant group, with one matching SQS queue
+#
+# Create a new tenant group, with one matching SQS queue. Define S3 Event Notification from the bucket to SQS
+# Keep information of the tenant group in DynamoDB.
 # 
 if __name__ == '__main__':
     TENANT_GROUP_NAME=processArguments()
