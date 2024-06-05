@@ -283,7 +283,7 @@ See [the product documentation for persistence configuration.](https://activemq.
 
 * [Point to point producer to consumer using JMS](./labs/ow-pt-to-pt-jms.md) running locally to start playing with Active MQ classic, or deploy the two apps and the Broker on Amazon MQ with AWS CDK as infrastructure as code.
 
-## To address
+## To address in the future
 
 * amqp client 
 * reactive messaging with brocker as channel

@@ -20,17 +20,17 @@ The main readers of this website are people interested in AWS messaging and open
 * Solution architects
 * Developers, new to distributed system solutions, with interest in AWS and messaging systems
 
-This site is a companion of my [AWS Studies site](https://jbcodeforce.github.io/yarfba) where I keep summaries of AWS products and my [Event-Driven Architecture book](https://jbcodeforce.github.io/eda-studies/).
+This site is a companion of my [Event-Driven Architecture book](https://jbcodeforce.github.io/eda-studies/).
 
 ## Link back to Event-Driven Architecture
 
 The EDA reference architecture, as introduced in the following figure, uses the concept of event backbone, which is a messaging component supporting asynchronous communication between components
 
-![](https://jbcodeforce.github.io/eda-studies/diagrams/eda-hl.drawio.png)
+![](https://jbcodeforce.github.io/eda-studies/concepts/diagrams/eda-hl.drawio.png)
 
 When zooming into this component, we can see queueing systems are very important to support event or message driven integration:
 
-![](https://jbcodeforce.github.io/eda-studies/diagrams/event-backbone.drawio.png)
+![](https://jbcodeforce.github.io/eda-studies/concepts/diagrams/event-backbone.drawio.png)
 
 This repository tries to go deeper in each of those components.
 
