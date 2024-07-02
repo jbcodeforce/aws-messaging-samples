@@ -1,7 +1,7 @@
 :root > * {
-    --md-primary-fg-color:        #FF9900;
-    --md-primary-fg-color--light: #ECB7B7;
-    --md-primary-fg-color--dark:  #90030C;
+    --md-primary-fg-color:        #0407ac;
+    --md-primary-fg-color--light: #6f66eb;
+    --md-primary-fg-color--dark:  #4c7fdd;
   }
 
 .section ul li {
@@ -9,7 +9,7 @@
 }
 
 hr {
-    background-color:        #FF9900;
+    background-color:        #0407ac;
 }
 
 .md-typeset pre>code {
