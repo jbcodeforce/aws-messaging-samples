@@ -3,7 +3,7 @@
 ???+ Info
     **Created:** Dec 2023 - Updated: **01/26/24**. State: Draft
 
-This study reviews, how to best support the Amazon S3 Event Notification processing, using an event-driven processing approach.
+This study reviews, how to best support the Amazon S3 Event Notification processing, using an event-driven processing approach to help an software vendor computing the storage usage of its users in a multi-tenancy architecture.
 
 As in any event-driven solution, the choice of implementation approaches will depend of the requirements (Confucius may have already said it), this article addresses a multi-tenancy use case,  for S3 notification event processing at scale.
 
@@ -13,11 +13,11 @@ The goal is to help developers or solution architects review the possible soluti
 
 ## Introduction
 
-This code demonstration in this [repository/folder](https://github.com/jbcodeforce/aws-messaging-study/tree/main/SQS/s3-event-processing) is to mockup a SaaS multi-tenant application using S3 as Data Lake and an asynchronous event-driven processing to address S3 put or update object event notifications with a goal to support 100k+ tenants.
+The implementation demonstration in this [repository/folder](https://github.com/jbcodeforce/aws-messaging-study/tree/main/SQS/s3-event-processing) is to mockup a SaaS multi-tenant application using S3 as Data Lake and an asynchronous event-driven processing to address **S3 put or update object** event notifications with a goal to support 100k+ tenants.
 
 Each bucket has top level prefixes assigned to a unique tenant. Within a prefix, user can have a hierarchy of 'folders' and objects. It is a multi-tenancy segregation pattern at the prefix level. The following figure illustrates a simple example of bucket and prefix per tenant organization:
 
-```
+```sh
 tenant-group-1 (bucket)
 ├── tenant_1
 │   ├── raw
@@ -30,16 +30,16 @@ tenant-group-1 (bucket)
 └── tenant_3
 ```
 
-* To control file upload, a tool will take into account the tenant's unique identifier so it can map the target S3 object prefix.
+* To control file upload, a tool will take into account the tenant's unique identifier so the system can map the target S3 object prefix to a tenant.
 * The solution needs to support million of files uploaded to S3 per day, at a rate of 200k file moves per minute. Once a file is uploaded (in `raw` prefix), there are file processors that transform the file into another format (the demonstration in this repository, uses Iceberg) to save in another prefix (`silver`). The basic processing, for a unique tenant, looks like in following figure:
 
-![](./diagrams/s3event-processing.drawio.png)
+![](./diagrams/s3event-processing.drawio.png){ width=900 }
 
 **Figure 1: Single tenant processing**
 
 * The event-driven processor can directly get messages from the SQS queue, using AWS SDK. It has to manage idempotency as S3 Event notification may generate retries, so delivering the same message multiple times.
 * The SaaS platform needs to support hundred of those event-driven processing in parallel, at least one per tenant.
-* The SaaS AWS account is the owner of the buckets, the queues, or topics used for the solution.
+* The SaaS AWS account is the owner of the buckets, and any queues, or topics used for the solution.
 
 ### Constraints and constructs
 
@@ -80,9 +80,9 @@ tenant-group-1 (bucket)
                                 )
     ```
 
-* Notifications are asynchronous: S3 will queue events and retry delivery if destinations are unavailable. This avoids blocking the caller.
-* For demonstration purpose, we will process ObjectCreated events. See [the other supported notifications for SQS](https://docs.aws.amazon.com/AmazonS3/latest/userguide/notification-how-to-event-types-and-destinations.html#supported-notification-event-types) and [for the ones for EventBridge](https://docs.aws.amazon.com/AmazonS3/latest/userguide/EventBridge.html). Also CDK is quite static and works well with infrastructure as code and CI/CD practices. For this demonstration SDK may be a better solution to demonstrate the flexibility of the SaaS platform to add tenant dynamically: we can imagine a `create tenant` API that provisions a prefix and assigns it to an existing bucket dynamically.
-* On rare occasion S3 retry mechanism might cause duplicate S3 event notification.
+* Notifications are asynchronous: S3 will queue events and will retry delivery if destinations are unavailable. This avoids blocking the caller.
+* For demonstration purpose, we will process ObjectCreated events. See [the other supported notifications for SQS](https://docs.aws.amazon.com/AmazonS3/latest/userguide/notification-how-to-event-types-and-destinations.html#supported-notification-event-types) and [for the ones in EventBridge](https://docs.aws.amazon.com/AmazonS3/latest/userguide/EventBridge.html). Also CDK is quite static and works well with infrastructure as code and CI/CD practices. For this demonstration SDK may be a better solution to demonstrate the flexibility of the SaaS platform to add tenant dynamically: we can imagine a `create tenant` API that provisions a prefix and assigns it to an existing bucket dynamically.
+* On rare occasion, S3 retry mechanism might cause duplicate S3 event notification.
 * Event ordering: S3 event notification to SQS FIFO is not supported. Event Notification includes a Sequencer attribute which can be used to determine the order of events for a given object key. Sequencer provides a way to determine the sequence of events. Notifications from events that create objects (PUTs) and delete objects contain a sequencer.
 
 ### Limits
@@ -159,7 +159,7 @@ Below is a simple tenant group definition for one S3 bucket and one unique queue
 
 See the Python code to [create tenant group](https://github.com/jbcodeforce/aws-messaging-study/blob/main/SQS/s3-sqs-fanout/createGroupTenant.py) for demonstration purpose.
 
-When onboarding a tenant, the platform defines a unique tenant_id, and links it to the target bucket and prefix within a persisted Hash Map. This will be used by the SaaS SDK to put the file in the good `bucket / 'folder'`. The following json may be persisted in DynamoDB.
+When onboarding a tenant, the platform defines a unique `tenant_id`, and links it to the target bucket and prefix within a persisted Hash Map. This will be used by the SaaS SDK to put the file in the good `bucket / 'folder'`. The following json may be persisted in DynamoDB.
 
 ```json
 {
@@ -177,7 +177,7 @@ When onboarding a tenant, the platform defines a unique tenant_id, and links it 
 
 The following approach illustrates the simplest asynchronous architecture, using different S3 event notifications based on prefixes and a unique queue per tenant.
 
-![](./diagrams/s3-sqs-fanout.drawio.png)
+![](./diagrams/s3-sqs-fanout.drawio.png){ width=900}
 
 **Figure 5: S3 event notification to SQS tenant queue**
 
@@ -222,7 +222,7 @@ The following approach illustrates the simplest asynchronous architecture, using
 
 A more flexible implementation may use Lambda function as a target to S3 Event Notification, to support flexible routing and filtering implementation, use the fan-out pattern, and support batching the events. If the event-driven processing is exposed via HTTP the Lambda function may directly call the good HTTP endpoint:
 
-![](./diagrams/s3-lambda-fanout.drawio.png){ width=750 }
+![](./diagrams/s3-lambda-fanout.drawio.png){ width=900 }
 
 **Figure 6: Lambda to fanout to http endpoints**
 
@@ -230,7 +230,7 @@ Lambda can scale at thousand of instances in parallel. The solution uses one que
 
 When the event-driven processing needs to be asynchronous, then we can add one queue before each event-driven process and the Lambda will send the event to the good queue.
 
-![](./diagrams/s3-lambda-sqs-fanout.drawio.png){ width=750 }
+![](./diagrams/s3-lambda-sqs-fanout.drawio.png){ width=900 }
 
 **Figure 7: Lambda to fan out to SQS queues**
 
@@ -270,9 +270,9 @@ For the Lambda routing implementation, Lambda will automatically deletes the mes
 
 The pricing model is pay per call, duration and memory used.
 
-See a proof of concept implementation of the following deployment 
+See a proof of concept implementation of the following deployment:
 
-![](./diagrams/demo-1-e2e.drawio.png)
+![](./diagrams/demo-1-e2e.drawio.png){ width=900}
 
 with demonstration script in [this folder](https://github.com/jbcodeforce/aws-messaging-study/tree/main/SQS/s3-event-processing).
 
@@ -293,30 +293,30 @@ The advantages:
 
 The disadvantages:
 
-* The limit on the number of filter policies. The solution is to add filtering logic within a Lambda function, which will only be relevant if there are other subscribers to the SNS topic for other type of event processing, like analytics. If there is no other consumer then the S3-> SQS -> Lambda -> SQS solution may be more appropriate.
+* There is a limit on the number of filter policies. The solution is to add filtering logic within a Lambda function, which will only be relevant if there are other subscribers to the SNS topic for other type of event processing, like analytics. If there is no other consumer then the S3-> SQS -> Lambda -> SQS solution may be more appropriate.
 
-![](./diagrams/s3-sns-lambda-e2e.drawio.png)
+![](./diagrams/s3-sns-lambda-e2e.drawio.png){ width=900}
 
 
 ### SQS - Event Bridge
 
 Event Bridge could be a solution if the S3 event processing is exposed with HTTP endpoint. Routing rule will be used to select the target end-point depending of the tenant information. But there is a limit of 2000 rules per event bus, so it may not be a valid solution to address the use case of thousand of tenants.
 
-![](./diagrams/s3-sqs-eb-fanout.drawio.png)
+![](./diagrams/s3-sqs-eb-fanout.drawio.png){ width=900}
 
-S3 Event Notifications can be sent to the default event bus only. 
+Also S3 Event Notifications can be sent to the default event bus only, we may need different buses.
 
 ### SQS - MSK
 
-Finally Kafka may be a solution to stream the S3 event notification to it, via a queue. The interest will be to be able to replay the events and really embrace an event-driven architecture where any consumers may come to consume messages and use an event-sourcing pattern.
+Finally Kafka may be a solution to stream the S3 event notification to it, via a SQS queue. The interest of this solution, will be to enable event replay and really embrace an event-driven architecture where any consumers may come to consume messages and use an event-sourcing pattern.
 
-![](./diagrams/s3-sqs-msk-fanout.drawio.png)
+![](./diagrams/s3-sqs-msk-fanout.drawio.png){ width=900}
 
-It may be more complex to deploy as we need to define a MSK cluster, and Kafka Connect - SQS source connector. The Event-driven processes need to consume from Kafka. Event ordering will be kept. It will scale to thousand of consumers.
+It may be more complex to deploy as we need to define a MSK cluster, and Kafka Connect - SQS source connector. The Event-driven processes need to consume from Kafka. Event ordering will be kept. It will scale to thousand of consumers. This will be a recommended approach when such events are becoming events that can be consumed by many different consumers.
 
 ## Conclusion
 
-For a cost perspective scale to zero is important, and do not have computers waiting for events to come is interesting. The Lambda with SQS queues seems the most appropriate method to address the multi-tenant at scale requirements of this solution. As an alternate approach, using a long term strategy of doing an event-driven architecture then Kafka based solution will be a better choice. 
+For a cost perspective, scale to zero is very important, as the solution deployment does not need to get computers waiting for events to come. The Lambda with SQS queues seems the most appropriate method to address the multi-tenant at scale requirements of this solution. As an alternate approach, using a long term strategy of doing an event-driven architecture then Kafka based solution will be a better choice. 
 
 ## Sources of information
 
@@ -325,6 +325,8 @@ For a cost perspective scale to zero is important, and do not have computers wai
 * [Getting visibility into storage usage in multi-tenant Amazon S3 buckets](https://aws.amazon.com/blogs/storage/getting-visibility-into-storage-usage-in-multi-tenant-amazon-s3-buckets/)
 
 ## Project Status
+
+01/2024:
 
 * [x] Python SDK to create a tenant group with one matching SQS queue. Define S3 Event Notification from the bucket to SQS. Keep information of the tenant group in DynamoDB.
 * [x] Python SDK to create a new tenant within a given group: create a prefix under the bucket for raw and silver prefixes. Create a SQS per tenant. Persist information about a tenant in DynamoDB.
